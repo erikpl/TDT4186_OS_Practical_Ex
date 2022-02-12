@@ -1,5 +1,9 @@
 #include <stdio.h>
 #include <time.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include<sys/wait.h>
+
 
 // Create a tm_struct of the user-input
 struct tm CreateTmStruct() {
@@ -8,7 +12,7 @@ struct tm CreateTmStruct() {
   int uyear, umonth, uday, uhour, uminute, usecond;
 
   // Prompt user
-  printf("Enter: Year, Month, Day, Hour, Minute, Second:");
+  printf("\nEnter: Year, Month, Day, Hour, Minute, Second: \n");
   
   // Assign user-input to values
   scanf("%d %d %d %d %d %d", &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
@@ -27,22 +31,65 @@ struct tm CreateTmStruct() {
   return tmStruct;
 };
 
+time_t initialize(struct tm tm_struct){
+
+ // Initialize time_t representation
+      time_t time_repr;
+      time_repr = mktime(&tm_struct);
+    
+      // Create a timestring
+      char *timeString;
+      timeString = ctime(&time_repr);
+
+     // Print timestring
+      printf("New alarm set for: \n");
+      printf("%s", timeString );
+
+      return time_repr;
+}
+
+void setAlarm(time_t time_repr) {
+  //Creates a fork (Child id = 0)      
+    int pid, parentID;
+    pid = fork();
+
+    if (pid == 0) {
+  //Calculates seconds until alarm goes off
+      time_t t;
+      time(&t);
+      double diff_t;
+      diff_t = difftime(time_repr, t);
+
+  //Waits the amount of seconds and then prints the alarm
+      sleep(diff_t);
+      printf("\n ALARM! \n");
+        
+  //Terminates child process
+      exit(pid);           
+}
+
+  //The parent process
+    else { 
+      struct tm tm_struct;
+      tm_struct = CreateTmStruct();
+      time_t time_repr;
+      time_repr = initialize(tm_struct);
+      setAlarm(time_repr);
+}
+}
+
 int main() {
 
-    // Initialize and create a tm_struct
-    struct tm tm_struct;
-    tm_struct = CreateTmStruct();
+     struct tm tm_struct;
+      tm_struct = CreateTmStruct();
+      time_t time_repr;
+      time_repr = initialize(tm_struct);
+      setAlarm(time_repr);
+      
+    } 
 
-    // Initialize time_t representation
-    time_t time_repr;
-    time_repr = mktime(&tm_struct);
-    
-    // Create a timestring
-    char *timeString;
-    timeString = ctime(&time_repr);
 
-    // Print timestring
-    printf("%s", timeString);
+   
 
-    return 0;
-}
+
+
