@@ -9,14 +9,15 @@ int uyear, umonth, uday, uhour, uminute, usecond;
 
 typedef struct Alarms {
    struct tm tm_struct;
+   time_t num_seconds;
+   char* time_repr;
    int pid;
- //  char time_repr;
 } Alarm;
 
 
 // To read how to format a tmStruct, read documentation: https://www.tutorialspoint.com/c_standard_library/time_h.htm
 // Create a tm_struct of the user-input
-struct Alarms CreateAlarmStruct(int* uyear, int* umonth, int* uday, int* uhour, int* uminute, int *usecond) {
+struct Alarms CreateNewAlarm(int* uyear, int* umonth, int* uday, int* uhour, int* uminute, int *usecond) {
 
    // Init alarm
    Alarm alarm;
@@ -29,44 +30,24 @@ struct Alarms CreateAlarmStruct(int* uyear, int* umonth, int* uday, int* uhour, 
    alarm.tm_struct.tm_mon = *umonth - 1;
    alarm.tm_struct.tm_year = *uyear - 1900;
 
-   // Create a timestring
-   // time_t time_repr;
-   // time_repr = mktime(&alarm.tm_struct);
-   // char char_time = ctime(&time_repr);
-   // alarm.time_repr = &char_time;
+   // Create time_t (long int) and time_repr (string) from the tm_struct
+   time_t num_seconds;
+   num_seconds = mktime(&alarm.tm_struct);
+   alarm.num_seconds = num_seconds;
+   alarm.time_repr = ctime(&num_seconds);
 
   return alarm;
 };
-
-// time_t initialize(struct tm tm_struct){
-
-//       // Initialize time_t representation
-//       time_t time_repr;
-//       time_repr = mktime(&tm_struct);
-    
-//       // Create a timestring
-//       char *timeString;
-//       timeString = ctime(&time_repr);
-
-//       // Print timestring
-//       printf("New alarm set for: \n");
-//       printf("%s", timeString );
-
-//       return time_repr;
-// }
 
 void setAlarm(int* uyear, int* umonth, int* uday, int* uhour, int* uminute, int *usecond) {
    //Creates a fork (Child id = 0)     
    int child_pid, parent_pid;
 
-   child_pid = fork();
-   parent_pid = getpid();
+   // child_pid = fork();
+   // parent_pid = getpid();
 
-   Alarm new_alarm = CreateAlarmStruct(uyear, umonth, uday, uhour, uminute, usecond);
-   new_alarm.pid = child_pid;
-   printf("%d child pid, %d parent PID\n\n\n", child_pid, parent_pid);
-  // printf("%d timestring", new_alarm.time_repr);
-
+   Alarm new_alarm = CreateNewAlarm(uyear, umonth, uday, uhour, uminute, usecond);
+   //new_alarm.pid = child_pid;
 
 
 //    //The child process
@@ -94,7 +75,7 @@ void setAlarm(int* uyear, int* umonth, int* uday, int* uhour, int* uminute, int 
 //       //Initialize and create a tm_struct
 //       struct tm tm_struct;
       
-//       tm_struct = CreateAlarmStruct(&pid, &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
+//       tm_struct = CreateNewAlarm(&pid, &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
 
 //       //Initialize time_t representation
 //       time_t time_repr;
@@ -114,20 +95,11 @@ int main() {
       scanf("%d %d %d %d %d %d", &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
 
       // Call function setAlarm with user-input
-      setAlarm(&uyear, &umonth, &uday, &uhour, &uminute, &usecond);
+      Alarm new_alarm = CreateNewAlarm(&uyear, &umonth, &uday, &uhour, &uminute, &usecond);
 
-
-   //    //Initialize and create a tm_struct
-   //    struct tm tm_struct;
-   //    int pid;
-   //  //  tm_struct = CreateAlarmStruct(&pid, &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
-
-   //    //Initialize time_t representation
-   //    time_t time_repr;
-
-   //    //Call function initialize with tm_struct as argument
-   //    time_repr = initialize(tm_struct);
-
+      // For testing the new alarm
+      printf("\ntimestring: %s\n", new_alarm.time_repr);
+      printf("num seconds: %ld\n", new_alarm.num_seconds);
 
       return 0;
     }
