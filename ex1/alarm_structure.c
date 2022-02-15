@@ -43,48 +43,40 @@ struct Alarms CreateNewAlarm(int* uyear, int* umonth, int* uday, int* uhour, int
 
 
 void setAlarm(int* uyear, int* umonth, int* uday, int* uhour, int* uminute, int *usecond) {
-   //Creates a fork (Child id = 0)     
    int child_pid, parent_pid;
+   // Calling getpid before forking will return the pid of the parent
+   parent_pid = getpid();
+   // Gets child pid from fork
+   child_pid = fork();
+   // From here, both processes run the same code
 
-   // child_pid = fork();
-   // parent_pid = getpid();
+   if (getpid() == child_pid) {
+      time_t t;
+      time(&t);
+      double diff_t;
+      diff_t = difftime(time_repr, t);
 
-   Alarm new_alarm = CreateNewAlarm(uyear, umonth, uday, uhour, uminute, usecond);
-   //new_alarm.pid = child_pid;
-
-
-//    //The child process
-//     if (pid == 0) {
-
-//       //Calculates seconds until alarm goes off
-//       time_t t;
-//       time(&t);
-//       double diff_t;
-//       diff_t = difftime(time_repr, t);
-
-//       //Waits the amount of seconds and then prints the alarm
-//       sleep(diff_t);
-//       printf("\n ALARM! \n");
+      //Waits the amount of seconds and then prints the alarm
+      sleep(diff_t);
+      printf("\n ALARM! \n");
       
-//       //Terminates child process
-//       exit(pid);           
-//    }
-
-//    //The parent process
-//     else { 
-
-//       printf("%d", pid);
-
-//       //Initialize and create a tm_struct
-//       struct tm tm_struct;
+      //Terminates child process
+      exit(child_pid); 
+   }
+   else {
+      //Initialize and create a tm_struct
+      struct tm tm_struct;
       
 //       tm_struct = CreateNewAlarm(&pid, &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
 
-//       //Initialize time_t representation
-//       time_t time_repr;
+     //Initialize time_t representation
+      time_t time_repr;
 
-//       //Call function initialize with tm_struct as argument
-//       time_repr = initialize(tm_struct);
+      //Call function initialize with tm_struct as argument
+      time_repr = initialize(tm_struct);
+      // SetAlarm calls itself with time_repr as argument
+      setAlarm(time_repr);
+   }
 
 //       // SetAlarm calls itself with time_repr as argument
 //       setAlarm(time_repr);
