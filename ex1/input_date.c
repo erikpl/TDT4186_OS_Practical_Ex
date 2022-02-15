@@ -16,7 +16,8 @@ typedef struct Alarms {
 
 // To read how to format a tmStruct, read documentation: https://www.tutorialspoint.com/c_standard_library/time_h.htm
 // Create a tm_struct of the user-input
-struct Alarms CreateAlarmStruct(int* uyear, int* umonth, int* uday, int* uhour, int* uminute, int *usecond) {
+// TODO: Return alarm or alarm pointer?
+struct Alarms CreateAlarmStruct(int* pid, int* uyear, int* umonth, int* uday, int* uhour, int* uminute, int *usecond) {
 
    // Init alarm
    Alarm alarm;
@@ -29,6 +30,8 @@ struct Alarms CreateAlarmStruct(int* uyear, int* umonth, int* uday, int* uhour, 
    alarm.tm_struct.tm_mon = *umonth - 1;
    alarm.tm_struct.tm_year = *uyear - 1900;
 
+   alarm.pid = *pid;
+
    // Create a timestring
    // time_t time_repr;
    // time_repr = mktime(&alarm.tm_struct);
@@ -38,74 +41,43 @@ struct Alarms CreateAlarmStruct(int* uyear, int* umonth, int* uday, int* uhour, 
   return alarm;
 };
 
-// time_t initialize(struct tm tm_struct){
-
-//       // Initialize time_t representation
-//       time_t time_repr;
-//       time_repr = mktime(&tm_struct);
-    
-//       // Create a timestring
-//       char *timeString;
-//       timeString = ctime(&time_repr);
-
-//       // Print timestring
-//       printf("New alarm set for: \n");
-//       printf("%s", timeString );
-
-//       return time_repr;
-// }
 
 void setAlarm(int* uyear, int* umonth, int* uday, int* uhour, int* uminute, int *usecond) {
-   //Creates a fork (Child id = 0)     
    int child_pid, parent_pid;
-
-   child_pid = fork();
+   // Calling getpid before forking will return the pid of the parent
    parent_pid = getpid();
+   // Gets child pid from fork
+   child_pid = fork();
+   // From here, both processes run the same code
 
-   Alarm new_alarm = CreateAlarmStruct(uyear, umonth, uday, uhour, uminute, usecond);
-   new_alarm.pid = child_pid;
-   printf("%d child pid, %d parent PID\n\n\n", child_pid, parent_pid);
-  // printf("%d timestring", new_alarm.time_repr);
+   if (getpid() == child_pid) {
+      time_t t;
+      time(&t);
+      double diff_t;
+      diff_t = difftime(time_repr, t);
 
-
-
-//    //The child process
-//     if (pid == 0) {
-
-//       //Calculates seconds until alarm goes off
-//       time_t t;
-//       time(&t);
-//       double diff_t;
-//       diff_t = difftime(time_repr, t);
-
-//       //Waits the amount of seconds and then prints the alarm
-//       sleep(diff_t);
-//       printf("\n ALARM! \n");
+      //Waits the amount of seconds and then prints the alarm
+      sleep(diff_t);
+      printf("\n ALARM! \n");
       
-//       //Terminates child process
-//       exit(pid);           
-//    }
-
-//    //The parent process
-//     else { 
-
-//       printf("%d", pid);
-
-//       //Initialize and create a tm_struct
-//       struct tm tm_struct;
+      //Terminates child process
+      exit(child_pid); 
+   }
+   else {
+      //Initialize and create a tm_struct
+      struct tm tm_struct;
       
-//       tm_struct = CreateAlarmStruct(&pid, &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
+      Alarm new_alarm = CreateAlarmStruct(&parent_pid, &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
 
-//       //Initialize time_t representation
-//       time_t time_repr;
+     //Initialize time_t representation
+      time_t time_repr;
 
-//       //Call function initialize with tm_struct as argument
-//       time_repr = initialize(tm_struct);
+      //Call function initialize with tm_struct as argument
+      time_repr = initialize(tm_struct);
+      // SetAlarm calls itself with time_repr as argument
+      setAlarm(time_repr);
+   }
 
-//       // SetAlarm calls itself with time_repr as argument
-//       setAlarm(time_repr);
-// }
-}
 
 int main() {
 
