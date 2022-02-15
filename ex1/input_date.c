@@ -33,15 +33,15 @@ struct tm CreateTmStruct() {
 
 time_t initialize(struct tm tm_struct){
 
- // Initialize time_t representation
+   // Initialize time_t representation
       time_t time_repr;
       time_repr = mktime(&tm_struct);
     
-      // Create a timestring
+   // Create a timestring
       char *timeString;
       timeString = ctime(&time_repr);
 
-     // Print timestring
+   // Print timestring
       printf("New alarm set for: \n");
       printf("%s", timeString );
 
@@ -49,41 +49,58 @@ time_t initialize(struct tm tm_struct){
 }
 
 void setAlarm(time_t time_repr) {
-  //Creates a fork (Child id = 0)      
+   //Creates a fork (Child id = 0)      
     int pid, parentID;
     pid = fork();
 
+   //The child process
     if (pid == 0) {
-  //Calculates seconds until alarm goes off
+
+   //Calculates seconds until alarm goes off
       time_t t;
       time(&t);
       double diff_t;
       diff_t = difftime(time_repr, t);
 
-  //Waits the amount of seconds and then prints the alarm
+   //Waits the amount of seconds and then prints the alarm
       sleep(diff_t);
       printf("\n ALARM! \n");
         
-  //Terminates child process
+   //Terminates child process
       exit(pid);           
 }
 
-  //The parent process
+   //The parent process
     else { 
+
+   //Initialize and create a tm_struct
       struct tm tm_struct;
       tm_struct = CreateTmStruct();
+
+   //Initialize time_t representation
       time_t time_repr;
+
+   //Call function initialize with tm_struct as argument
       time_repr = initialize(tm_struct);
+    
+   // SetAlarm calls itself with time_repr as argument
       setAlarm(time_repr);
 }
 }
 
 int main() {
 
-     struct tm tm_struct;
+   //Initialize and create a tm_struct
+      struct tm tm_struct;
       tm_struct = CreateTmStruct();
+
+   //Initialize time_t representation
       time_t time_repr;
+
+   //Call function initialize with tm_struct as argument
       time_repr = initialize(tm_struct);
+
+   // Call function SetAlarm with time_repr as argument
       setAlarm(time_repr);
       
     } 
