@@ -26,21 +26,3 @@ void set_tm_struct_with_time_values(int *uyear, int *umonth, int *uday, int *uho
 
     return 0;
 }
-
-int main() {
-    time_t seconds;
-
-    // When passed the parameter NULL, time defaults to returning the current time
-    seconds = time(NULL);
-
-    // Time-and-date struct to hold the current time
-    struct tm* current_time;
-
-    // Initialize the time-and-date struct based on current seconds
-    current_time = localtime(&seconds);
-
-    sleep(10);
-
-    time_t new_time = time_t_from_tm_struct
-}
-
