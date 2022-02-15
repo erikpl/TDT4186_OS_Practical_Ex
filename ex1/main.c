@@ -15,6 +15,13 @@ int main() {
     printf("\nPlease enter 's' (schedule), 'l' (list), 'c' (cancel), 'x' (exit): \n");
     scanf("%c", &choice);
     
+    // Array of alarms 
+    int max_alarms = 50;
+    int curr_alarm = 0;
+    Alarm all_alarms[max_alarms];
+
+
+
     // If the user chooses to schedule an alarm
     if (choice == 's') {
 
@@ -25,16 +32,19 @@ int main() {
         printf("\nSchedule alarm at which date and time? \n");
         scanf("%d %d %d %d %d %d", &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
 
-        // Call function setAlarm with user-input
-        Alarm new_alarm = CreateNewAlarm(&uyear, &umonth, &uday, &uhour, &uminute, &usecond);
+        // Create new alarm and add it to list of alarms. Then, iterate counter
+        all_alarms[curr_alarm] = CreateNewAlarm(&uyear, &umonth, &uday, &uhour, &uminute, &usecond);
 
-        // For testing the new alarm
-        printf("\nAlarm scheduled at %s\n", new_alarm.time_repr);
-        printf("which is %ld seconds since 1970:\n", new_alarm.num_seconds);
+        curr_alarm ++;
+        // Print information about the new alarm
+        printf("\nAlarm scheduled at %s\n", all_alarms[curr_alarm - 1].time_repr);
+        printf("which is %ld seconds since 1970:\n", all_alarms[curr_alarm - 1].num_seconds);
     }
+    
+    printf("\nAlarm scheduled at %s\n", all_alarms[0].time_repr);
 
     if (choice == 'l') {
-        
+
     }
 
 
