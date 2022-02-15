@@ -39,6 +39,9 @@ struct Alarms CreateNewAlarm(int* uyear, int* umonth, int* uday, int* uhour, int
   return alarm;
 };
 
+
+
+
 void setAlarm(int* uyear, int* umonth, int* uday, int* uhour, int* uminute, int *usecond) {
    //Creates a fork (Child id = 0)     
    int child_pid, parent_pid;
@@ -87,19 +90,3 @@ void setAlarm(int* uyear, int* umonth, int* uday, int* uhour, int* uminute, int 
 //       setAlarm(time_repr);
 // }
 }
-
-int main() {
-
-      // Prompt user and assign user-input to prompt-values
-      printf("\nEnter: Year, Month, Day, Hour, Minute, Second: \n");
-      scanf("%d %d %d %d %d %d", &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
-
-      // Call function setAlarm with user-input
-      Alarm new_alarm = CreateNewAlarm(&uyear, &umonth, &uday, &uhour, &uminute, &usecond);
-
-      // For testing the new alarm
-      printf("\ntimestring: %s\n", new_alarm.time_repr);
-      printf("num seconds: %ld\n", new_alarm.num_seconds);
-
-      return 0;
-    }
