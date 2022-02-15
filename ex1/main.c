@@ -9,6 +9,10 @@
 #define CANCEL 'c'
 #define EXIT 'x'
 
+const int MAX_ALARMS = 50;
+
+int curr_alarm;
+
 int main() {
     time_t current_secs = current_time_as_secs();
     struct tm *current_time = tm_struct_from_time_t(&current_secs);
@@ -29,14 +33,13 @@ int main() {
     scanf("%c", &choice);
     
     // Array of alarms 
-    int max_alarms = 50;
-    int curr_alarm = 0;
-    Alarm all_alarms[max_alarms];
+    curr_alarm = 0;
+    Alarm all_alarms[MAX_ALARMS];
 
 
 
     // If the user chooses to schedule an alarm
-    if (choice == 's') {
+    if (choice == SCHEDULE) {
 
         // Initialize time-variables
         int uyear, umonth, uday, uhour, uminute, usecond;
