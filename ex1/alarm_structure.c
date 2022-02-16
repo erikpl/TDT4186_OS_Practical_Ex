@@ -11,13 +11,13 @@ int uyear, umonth, uday, uhour, uminute, usecond;
 typedef struct Alarm {
    struct tm tm_struct;
    time_t num_seconds;
-   int pid;
+   pid_t pid;
 } Alarm;
 
 
 // To read how to format a tmStruct, read documentation: https://www.tutorialspoint.com/c_standard_library/time_h.htm
 // Create a tm_struct of the user-input
-struct Alarm CreateNewAlarm(int *uyear, int *umonth, int *uday, int *uhour, int *uminute, int *usecond) {
+struct Alarm CreateNewAlarm(pid_t pid, int *uyear, int *umonth, int *uday, int *uhour, int *uminute, int *usecond) {
 
    // Init alarm
    Alarm alarm; 
@@ -29,6 +29,7 @@ struct Alarm CreateNewAlarm(int *uyear, int *umonth, int *uday, int *uhour, int 
    alarm.tm_struct.tm_mday = *uday;
    alarm.tm_struct.tm_mon = *umonth - 1;
    alarm.tm_struct.tm_year = *uyear - 1900;
+   alarm.pid = pid;
 
    // Create time_t (long int) and time_repr (string) from the tm_struct
    time_t num_seconds;

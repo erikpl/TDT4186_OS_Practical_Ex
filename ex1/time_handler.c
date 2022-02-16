@@ -24,5 +24,5 @@ void set_tm_struct_with_time_values(int *uyear, int *umonth, int *uday, int *uho
     tm_struct -> tm_min = *uminute;
     tm_struct -> tm_sec = *usecond;
 
-    return 0;
+    /* return 0; */
 }
