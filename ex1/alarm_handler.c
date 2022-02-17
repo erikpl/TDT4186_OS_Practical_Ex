@@ -6,6 +6,8 @@
 #include "time_handler.c"
 #include "alarm_structure.c"
 
+#define IS_CHILD 0
+
 pid_t child_pid;
 pid_t parent_pid;
 
@@ -22,24 +24,33 @@ void set_alarm(Alarm alarm) {
     // Returns the PID of the currently running (parent) process
     parent_pid = getpid();
 
+    // PID of the child process if returned to the parent process
+    // 0 if returned to the child process
+    // -1 if the fork failed
     child_pid = fork();
+    
+    // From here on out, the same code is run by both processes
 
-    if (child_pid == 0) {
-        time_t current_time = current_time_as_secs();
+    // If run from the child process
+    if (child_pid == IS_CHILD) {
+        time_t current_time; 
+        set_current_time(&current_time);
         // Time to the alarm should ring = alarm_time - current_time
         int time_to_alarm = (int) difftime(alarm.num_seconds, current_time);
 
         // Wait until the alarm should ring
         sleep(time_to_alarm);
 
-        //Ring the alarm
+        // Ring the alarm
         printf("Ring!\n");
 
         // Exit the child process
-        exit(child_pid);
+        // Return 0 for success
+        exit(0);
     }
     else {
-        /* child_pid = wait(NULL);  */
+        // If the child process ran successfully, child_process_rc will be set to 0
+        int child_process_rc = wait(NULL);
     }
 
     
