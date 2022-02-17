@@ -17,7 +17,7 @@ typedef struct Alarm {
 
 // To read how to format a tmStruct, read documentation: https://www.tutorialspoint.com/c_standard_library/time_h.htm
 // Create a tm_struct of the user-input
-struct Alarm CreateNewAlarm(pid_t pid, int *uyear, int *umonth, int *uday, int *uhour, int *uminute, int *usecond) {
+struct Alarm create_new_alarm(pid_t pid, int *uyear, int *umonth, int *uday, int *uhour, int *uminute, int *usecond) {
 
    // Init alarm
    Alarm alarm; 

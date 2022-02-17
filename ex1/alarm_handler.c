@@ -19,7 +19,7 @@ void set_child_pid(pid_t *pid) {
     *pid = child_pid;
 }
 
-void set_alarm(Alarm alarm) {
+void set_alarm(Alarm *alarm) {
     
     // Returns the PID of the currently running (parent) process
     parent_pid = getpid();
@@ -36,7 +36,7 @@ void set_alarm(Alarm alarm) {
         time_t current_time; 
         set_current_time(&current_time);
         // Time to the alarm should ring = alarm_time - current_time
-        int time_to_alarm = (int) difftime(alarm.num_seconds, current_time);
+        int time_to_alarm = (int) difftime(alarm -> num_seconds, current_time);
 
         // Wait until the alarm should ring
         sleep(time_to_alarm);
@@ -52,9 +52,4 @@ void set_alarm(Alarm alarm) {
         // If the child process ran successfully, child_process_rc will be set to 0
         int child_process_rc = wait(NULL);
     }
-
-    
-  
-
-   /*  return 0; */
 }

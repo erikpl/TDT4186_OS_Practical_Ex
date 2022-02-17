@@ -10,10 +10,10 @@
 #define LIST 'l'
 #define CANCEL 'c'
 #define EXIT 'x'
+#define MAX_ALARMS 3
 
 // Init variables
-int max_alarms = 3;
-int curr_alarm = 0;
+int current_alarm = 0;
 char choice;
 
 int main() {
@@ -31,7 +31,7 @@ int main() {
 
 
     // Init array of alarms 
-    Alarm all_alarms[max_alarms];
+    Alarm all_alarms[MAX_ALARMS];
 
     //TODO Welcome the user with the current time
 
@@ -40,76 +40,76 @@ int main() {
         printf("\nPlease enter 's' (schedule), 'l' (list), 'c' (cancel), 'x' (exit): \n");
         scanf(" %c", &choice);
 
+        switch (choice) {
         // If the user chooses to schedule an alarm
-        if (choice == SCHEDULE) {
+            case SCHEDULE:
+                pid_t child_pid;
+                // Sets child_pid to the newly created alarm process
+                // TODO: what are we actually retrieving here?
+                set_child_pid(&child_pid);
 
-            pid_t child_pid;
-            child_pid = getPid();
+                // Check if we have room for more alarms
+                if (current_alarm == MAX_ALARMS) {
+                    printf("\nCurrently at maximum amount of alarms\n");
+                    continue;
+                }
 
-            // Check if we have room for more alarms
-            if (max_alarms == curr_alarm) {
-                printf("\nCurrently at maximum amount of alarms\n");
-                continue;
-            }
+                // Initialize time-variables
+                int uyear, umonth, uday, uhour, uminute, usecond;
 
-            // Initialize time-variables
-            int uyear, umonth, uday, uhour, uminute, usecond;
-
-            // Prompt user and assign user-input to prompt-values
-            printf("\nSchedule alarm at which date and time (YYYY/MM/DD-HH:MM:SS)? \n");
-            scanf("%d/%d/%d-%02d:%02d:%02d", &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
+                // Prompt user and assign user-input to prompt-values
+                printf("\nSchedule alarm at which date and time (YYYY/MM/DD-HH:MM:SS)? \n");
+                scanf("%d/%d/%d-%02d:%02d:%02d", &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
 
 
-            // Create new alarm and add it to list of alarms. Then, iterate counter
-            all_alarms[curr_alarm] = CreateNewAlarm(child_pid, &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
+                // Create new alarm and add it to list of alarms. Then, iterate counter
+                all_alarms[current_alarm] = create_new_alarm(child_pid, &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
 
-            //Printer child_pid, bare for å sjekke
-            printf("The pid is: %d ", child_pid);
+                //Printer child_pid, bare for å sjekke
+                printf("The pid is: %d ", child_pid);
 
-            // Print information about the new alarm
-            printf("\nAlarm scheduled at %s", ctime(&all_alarms[curr_alarm].num_seconds));
+                // Print information about the new alarm
+                printf("\nAlarm scheduled at %s", ctime(&all_alarms[current_alarm].num_seconds));
 
-            //Set the alarm for the right time
-            set_alarm(all_alarms[curr_alarm]);
-          
-            // Iterate counter, letting us populate next slot in all_alarms array
-            curr_alarm ++;
-        }
+                //Set the alarm for the right time
+                set_alarm(&all_alarms[current_alarm]);
+            
+                // Iterate counter, letting us populate next slot in all_alarms array
+                current_alarm++;  
+
+                // Terminate switch statement
+                break;
         
         // If the user chooses to list all alarms
-        if (choice == LIST) {
+        case LIST: 
             
             // Purely for aesthetics
             printf("\n");
             
             // Print all the time representations of the alarms            
-            for (int i = 0; i < curr_alarm; ++i) {
-
+            for (int i = 0; i < current_alarm; i++) {
                 // NB NB!!!! ctime calls use statically allocated buffers for the return string. Therefore, we call ctime on num_seconds instead of storing the char array as this lets us avoid referencing issues. See more at https://www.ibm.com/docs/en/i/7.3?topic=functions-ctime-convert-time-character-string
                 printf("Alarm %d at %s", i, ctime(&all_alarms[i].num_seconds));
             }
-        }
+
+            break;
 
         // If the user chooses to cancel a given alarm
-        if (choice == CANCEL) {
+        case CANCEL:
             // Prompt user and assign user-input to prompt-values
             int cancel_pos;
             printf("\nCancel which alarm? \n");
             scanf("%d", &cancel_pos);
 
             // Make sure the user inputs a valid position
-            if(cancel_pos < 0 || cancel_pos > curr_alarm)
-            {
-                printf("Invalid position! Please enter position between 1 to %d\n", curr_alarm);
+            if (cancel_pos < 0 || cancel_pos > current_alarm) {
+                printf("Invalid position! Please enter position between 1 to %d\n", current_alarm);
             }
-            else
-            {
-                
+            else {
                 // Deletes the alarm at cancel_pos by copying over all alarms to the right
                 // This ensures adding and deleting a lot of alarms will not force us to restart the program
                 // and makes the alarm numbers update correctly
-                for (int i = cancel_pos; i < curr_alarm - 1; i++)
-                {
+                for (int i = cancel_pos; i < current_alarm - 1; i++) {
                     all_alarms[i] = all_alarms[i + 1];
                 }
 
@@ -119,9 +119,11 @@ int main() {
             
                 printf("\nAlarm number %d cancelled.\n", cancel_pos);                
                 // Decrement the current alarm counter by one to correctly assign next alarm
-                curr_alarm--;
-                }
+                current_alarm--;
             }
+
+            break;
+        }
     }
 
     return 0;

@@ -4,8 +4,13 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 
-time_t current_time_as_secs() {
-    return time(NULL);
+/**
+ * Sets the referenced time_t object to the current number of seconds
+ * 
+ * @param current_time 
+ */
+void set_current_time(time_t *current_time) {
+    *current_time = time(NULL);
 }
 
 time_t time_t_from_tm_struct(struct tm *tm_struct) {
