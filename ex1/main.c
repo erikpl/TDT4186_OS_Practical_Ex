@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <time.h>
+#include <signal.h>
 
 #include "alarm_structure.c"
 #include "alarm_handler.c"
@@ -42,6 +43,9 @@ int main() {
         // If the user chooses to schedule an alarm
         if (choice == SCHEDULE) {
 
+            pid_t child_pid;
+            child_pid = getPid();
+
             // Check if we have room for more alarms
             if (max_alarms == curr_alarm) {
                 printf("\nCurrently at maximum amount of alarms\n");
@@ -56,30 +60,21 @@ int main() {
             scanf("%d/%d/%d-%02d:%02d:%02d", &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
 
 
-
-            //Usikker på om dette returnerer riktig pid 
-            pid_t t;
-            t = getPid();
-            printf("The pid is: %d", t);
-
-            //Vi må bruke waitpid(), men litt usikker på hvor
-            /* t = wait(NULL); */
-           
-
             // Create new alarm and add it to list of alarms. Then, iterate counter
-            all_alarms[curr_alarm] = CreateNewAlarm(t, &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
+            all_alarms[curr_alarm] = CreateNewAlarm(child_pid, &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
+
+            //Printer child_pid, bare for å sjekke
+            printf("The pid is: %d ", child_pid);
 
             // Print information about the new alarm
             printf("\nAlarm scheduled at %s", ctime(&all_alarms[curr_alarm].num_seconds));
 
-
             //Set the alarm for the right time
             set_alarm(all_alarms[curr_alarm]);
-            
+          
             // Iterate counter, letting us populate next slot in all_alarms array
             curr_alarm ++;
         }
-        
         
         // If the user chooses to list all alarms
         if (choice == LIST) {
@@ -109,6 +104,7 @@ int main() {
             }
             else
             {
+                
                 // Deletes the alarm at cancel_pos by copying over all alarms to the right
                 // This ensures adding and deleting a lot of alarms will not force us to restart the program
                 // and makes the alarm numbers update correctly
@@ -117,8 +113,11 @@ int main() {
                     all_alarms[i] = all_alarms[i + 1];
                 }
 
-                printf("\nAlarm number %d cancelled.\n", cancel_pos);
+                
+                kill(all_alarms[cancel_pos-1].pid, SIGKILL);
 
+            
+                printf("\nAlarm number %d cancelled.\n", cancel_pos);                
                 // Decrement the current alarm counter by one to correctly assign next alarm
                 curr_alarm--;
                 }

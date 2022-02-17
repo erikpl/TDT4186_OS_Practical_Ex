@@ -5,7 +5,9 @@
 
 #include "time_handler.c"
 
-pid_t child_pid, parent_pid;
+
+ pid_t child_pid;
+ pid_t parent_pid;
 
 pid_t getPid() {
         pid_t pid;
@@ -14,6 +16,7 @@ pid_t getPid() {
     }
 
 void set_alarm(Alarm alarm) {
+    
     parent_pid = getpid();
 
     child_pid = fork();
@@ -33,7 +36,7 @@ void set_alarm(Alarm alarm) {
         exit(child_pid);
     }
     else {
-       /*  child_pid = wait(NULL); */
+        /* child_pid = wait(NULL);  */
     }
 
     
