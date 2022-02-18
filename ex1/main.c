@@ -4,7 +4,7 @@
 
 #include "alarm_structure.c"
 #include "alarm_handler.c"
-/* #include "time_handler.c" */
+#include "time_handler.c"
 
 #define SCHEDULE 's'
 #define LIST 'l'
@@ -17,32 +17,29 @@ int current_alarm = 0;
 char choice;
 
 int main() {
-    // time_t current_secs = current_time_as_secs();
-    // struct tm *current_time = tm_struct_from_time_t(&current_secs);
-    // printf("Welcome to the alarm clock! It is currently %04d-%02d-%02d %02d-%02d-%02d\n",
-    // // Add 1900 since tm_year denotes years since 1900
-    // current_time -> tm_year + 1900,
-    // // Add 1 since tm_mon is 0-indexed
-    // current_time -> tm_mon + 1,
-    // current_time -> tm_mday,
-    // current_time -> tm_hour,
-    // current_time -> tm_min,
-    // current_time -> tm_sec);
-
+    time_t current_secs;
+    set_current_time(&current_secs);
+    struct tm *current_time = tm_struct_from_time_t(&current_secs);
+    printf("Welcome to the alarm clock! It is currently %04d-%02d-%02d %02d-%02d-%02d\n",
+    // Add 1900 since tm_year denotes years since 1900
+    current_time -> tm_year + 1900,
+    // Add 1 since tm_mon is 0-indexed
+    current_time -> tm_mon + 1,
+    current_time -> tm_mday,
+    current_time -> tm_hour,
+    current_time -> tm_min,
+    current_time -> tm_sec);
 
     // Init array of alarms 
     Alarm all_alarms[MAX_ALARMS];
-
-    //TODO Welcome the user with the current time
 
     while (choice != EXIT) {
         // Let the user choose what action to complete
         printf("\nPlease enter 's' (schedule), 'l' (list), 'c' (cancel), 'x' (exit): \n");
         scanf(" %c", &choice);
 
-        switch (choice) {
         // If the user chooses to schedule an alarm
-            case SCHEDULE:
+            if (choice == SCHEDULE) {
                 pid_t child_pid;
                 // Sets child_pid to the newly created alarm process
                 // TODO: what are we actually retrieving here?
@@ -77,11 +74,10 @@ int main() {
                 // Iterate counter, letting us populate next slot in all_alarms array
                 current_alarm++;  
 
-                // Terminate switch statement
-                break;
+            }
         
         // If the user chooses to list all alarms
-        case LIST: 
+        else if (choice == LIST) {
             
             // Purely for aesthetics
             printf("\n");
@@ -91,11 +87,10 @@ int main() {
                 // NB NB!!!! ctime calls use statically allocated buffers for the return string. Therefore, we call ctime on num_seconds instead of storing the char array as this lets us avoid referencing issues. See more at https://www.ibm.com/docs/en/i/7.3?topic=functions-ctime-convert-time-character-string
                 printf("Alarm %d at %s", i, ctime(&all_alarms[i].num_seconds));
             }
-
-            break;
+        }
 
         // If the user chooses to cancel a given alarm
-        case CANCEL:
+        else if (choice == CANCEL) {
             // Prompt user and assign user-input to prompt-values
             int cancel_pos;
             printf("\nCancel which alarm? \n");
@@ -113,18 +108,16 @@ int main() {
                     all_alarms[i] = all_alarms[i + 1];
                 }
 
-                
                 kill(all_alarms[cancel_pos-1].pid, SIGKILL);
-
             
                 printf("\nAlarm number %d cancelled.\n", cancel_pos);                
                 // Decrement the current alarm counter by one to correctly assign next alarm
                 current_alarm--;
             }
-
-            break;
+        }
+        else {
+            printf("ERROR: Invalid input. Please try again.");
         }
     }
-
     return 0;
 }

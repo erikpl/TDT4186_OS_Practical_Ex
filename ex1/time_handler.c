@@ -1,3 +1,5 @@
+#ifndef TIME_HANDLER
+#define TIME_HANDLER
 #include <time.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -31,3 +33,4 @@ void set_tm_struct_with_time_values(int *uyear, int *umonth, int *uday, int *uho
 
     /* return 0; */
 }
+#endif // TIME_HANDLER

@@ -1,3 +1,6 @@
+#ifndef ALARM_HANDLER 
+#define ALARM_HANDLER
+
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -53,3 +56,5 @@ void set_alarm(Alarm *alarm) {
         int child_process_rc = wait(NULL);
     }
 }
+
+#endif // ALARM_HANDLER
