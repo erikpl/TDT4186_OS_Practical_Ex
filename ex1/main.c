@@ -40,10 +40,11 @@ int main() {
 
         // If the user chooses to schedule an alarm
             if (choice == SCHEDULE) {
-                pid_t child_pid;
+                // pid_t child_pid;
                 // Sets child_pid to the newly created alarm process
                 // TODO: what are we actually retrieving here?
-                set_child_pid(&child_pid);
+                // ER ANTAGELIG NOE FEIL HER JA
+                // set_child_pid(&child_pid);
 
                 // Check if we have room for more alarms
                 if (current_alarm == MAX_ALARMS) {
@@ -58,9 +59,9 @@ int main() {
                 printf("\nSchedule alarm at which date and time (YYYY/MM/DD-HH:MM:SS)? \n");
                 scanf("%d/%d/%d-%02d:%02d:%02d", &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
 
-
+                /**
                 // Create new alarm and add it to list of alarms. Then, iterate counter
-                all_alarms[current_alarm] = create_new_alarm(child_pid, &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
+                create_new_alarm(&(all_alarms[current_alarm]), &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
 
                 //Printer child_pid, bare for å sjekke
                 printf("The pid is: %d ", child_pid);
@@ -70,10 +71,40 @@ int main() {
 
                 //Set the alarm for the right time
                 set_alarm(&all_alarms[current_alarm]);
-            
-                // Iterate counter, letting us populate next slot in all_alarms array
-                current_alarm++;  
+                */
 
+                // TODO: FIKS TIDSBUG, TIDENE BLIR FEIL AV EN ELLER ANNEN GRUNN
+
+                Alarm alarm;
+                alarm.tm_struct.tm_sec = usecond;
+                alarm.tm_struct.tm_min = uminute;
+                alarm.tm_struct.tm_hour = uhour + 1;
+                alarm.tm_struct.tm_mday = uday;
+                alarm.tm_struct.tm_mon = umonth - 1;
+                alarm.tm_struct.tm_year = uyear - 1900;
+
+                time_t num_seconds;
+                num_seconds = mktime(&(alarm.tm_struct));
+                alarm.num_seconds = num_seconds;
+
+                printf("\nNUM SECONDS: %ld\n", alarm.num_seconds);
+
+                pid_t return_code;
+
+                return_code = fork();
+
+                if (return_code == 0) {
+                    sleep(alarm.num_seconds);
+                    printf("RING!\n");
+                    exit(0);
+                }
+
+                else {
+                    alarm.pid = return_code;
+                    all_alarms[current_alarm] = alarm;
+                    // Iterate counter, letting us populate next slot in all_alarms array
+                    current_alarm++;    
+                }
             }
         
         // If the user chooses to list all alarms

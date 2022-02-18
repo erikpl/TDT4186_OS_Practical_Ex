@@ -57,4 +57,4 @@ void set_alarm(Alarm *alarm) {
     }
 }
 
-#endif // ALARM_HANDLER
+#endif // ALARM_HANDLERx
