@@ -18,9 +18,9 @@ char choice;
 
 int main() {
     time_t current_secs;
-    set_current_time(&current_secs);
-    struct tm *current_time = tm_struct_from_time_t(&current_secs);
-    printf("Welcome to the alarm clock! It is currently %04d-%02d-%02d %02d-%02d-%02d\n",
+    current_secs = time(NULL);
+    struct tm *current_time = localtime(current_time);
+    printf("Welcome to the alarm clock! It is currently %04d-%02d-%02d %02d:%02d:%02d\n",
     // Add 1900 since tm_year denotes years since 1900
     current_time -> tm_year + 1900,
     // Add 1 since tm_mon is 0-indexed
@@ -33,6 +33,18 @@ int main() {
     // Init array of alarms 
     Alarm all_alarms[MAX_ALARMS];
 
+    int wait_status;
+    pid_t pid;
+
+    /** 
+     * Catch and terminate zombie processes.
+     * waitpid will wait until the child processes are done and claim their exit status.
+     * The WNOHANG option specifies that this waiting will be non-blocking.
+     * -1 means any child process.
+     * >0 means wait for the process with the same PID as pid 
+    */
+    // while (pid = waitpid(-1, &wait_status, WNOHANG) > 0);
+
     while (choice != EXIT) {
         // Let the user choose what action to complete
         printf("\nPlease enter 's' (schedule), 'l' (list), 'c' (cancel), 'x' (exit): \n");
@@ -40,12 +52,6 @@ int main() {
 
         // If the user chooses to schedule an alarm
             if (choice == SCHEDULE) {
-                // pid_t child_pid;
-                // Sets child_pid to the newly created alarm process
-                // TODO: what are we actually retrieving here?
-                // ER ANTAGELIG NOE FEIL HER JA
-                // set_child_pid(&child_pid);
-
                 // Check if we have room for more alarms
                 if (current_alarm == MAX_ALARMS) {
                     printf("\nCurrently at maximum amount of alarms\n");
@@ -57,45 +63,53 @@ int main() {
 
                 // Prompt user and assign user-input to prompt-values
                 printf("\nSchedule alarm at which date and time (YYYY/MM/DD-HH:MM:SS)? \n");
+                // TODO: validering av input
                 scanf("%d/%d/%d-%02d:%02d:%02d", &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
-
-                /**
-                // Create new alarm and add it to list of alarms. Then, iterate counter
-                create_new_alarm(&(all_alarms[current_alarm]), &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
-
-                //Printer child_pid, bare for å sjekke
-                printf("The pid is: %d ", child_pid);
-
-                // Print information about the new alarm
-                printf("\nAlarm scheduled at %s", ctime(&all_alarms[current_alarm].num_seconds));
 
                 //Set the alarm for the right time
                 set_alarm(&all_alarms[current_alarm]);
-                */
-
-                // TODO: FIKS TIDSBUG, TIDENE BLIR FEIL AV EN ELLER ANNEN GRUNN
 
                 Alarm alarm;
                 alarm.tm_struct.tm_sec = usecond;
                 alarm.tm_struct.tm_min = uminute;
                 alarm.tm_struct.tm_hour = uhour + 1;
                 alarm.tm_struct.tm_mday = uday;
+                // Months are zero-indexed in the tm struct
                 alarm.tm_struct.tm_mon = umonth - 1;
+                // Years are 1900-indexed in the tm struct
                 alarm.tm_struct.tm_year = uyear - 1900;
 
                 time_t num_seconds;
                 num_seconds = mktime(&(alarm.tm_struct));
                 alarm.num_seconds = num_seconds;
 
-                printf("\nNUM SECONDS: %ld\n", alarm.num_seconds);
+                time_t current_time;
+
+                current_time = time(NULL);
 
                 pid_t return_code;
+
+                // Mulig denne må fikses
+                waitpid(-1, &wait_status, WNOHANG);
 
                 return_code = fork();
 
                 if (return_code == 0) {
-                    sleep(alarm.num_seconds);
-                    printf("RING!\n");
+                    time_t sleep_time = alarm.num_seconds - current_time;
+                    // Print information about the new alarm
+                    printf("\nAlarm scheduled at %s", ctime(&all_alarms[current_alarm].num_seconds));
+                    // Wait for the alarm to complete
+                    sleep(sleep_time);
+                    
+                    // Alarm notification mechanism depends on the OS
+                    #ifdef _WIN32
+                        printf("RING!\n");
+                    #elif __APPLE__
+                        execlp("afplay", "afplay", "./alarm_fx.mp3", 0);
+                    #elif __unix__
+                        execlp("mpg123", "mpg123", "-q", "./alarm_fx.mp3", 0);
+                    #endif
+
                     exit(0);
                 }
 
@@ -103,7 +117,7 @@ int main() {
                     alarm.pid = return_code;
                     all_alarms[current_alarm] = alarm;
                     // Iterate counter, letting us populate next slot in all_alarms array
-                    current_alarm++;    
+                    current_alarm++;   
                 }
             }
         
@@ -115,7 +129,9 @@ int main() {
             
             // Print all the time representations of the alarms            
             for (int i = 0; i < current_alarm; i++) {
-                // NB NB!!!! ctime calls use statically allocated buffers for the return string. Therefore, we call ctime on num_seconds instead of storing the char array as this lets us avoid referencing issues. See more at https://www.ibm.com/docs/en/i/7.3?topic=functions-ctime-convert-time-character-string
+                // NB NB!!!! ctime calls use statically allocated buffers for the return string. Therefore, we call ctime 
+                // on num_seconds instead of storing the char array as this lets us avoid referencing issues. 
+                // See more at https://www.ibm.com/docs/en/i/7.3?topic=functions-ctime-convert-time-character-string
                 printf("Alarm %d at %s", i, ctime(&all_alarms[i].num_seconds));
             }
         }
@@ -150,5 +166,4 @@ int main() {
             printf("ERROR: Invalid input. Please try again.");
         }
     }
-    return 0;
 }
