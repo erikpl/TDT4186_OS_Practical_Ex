@@ -1,18 +1,11 @@
-#ifndef TIME_HANDLER
-#define TIME_HANDLER
 #include <time.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/wait.h>
 
-/**
- * Sets the referenced time_t object to the current number of seconds
- * 
- * @param current_time 
- */
-void set_current_time(time_t *current_time) {
-    *current_time = time(NULL);
+time_t current_time_as_secs() {
+    return time(NULL);
 }
 
 time_t time_t_from_tm_struct(struct tm *tm_struct) {
@@ -33,4 +26,3 @@ void set_tm_struct_with_time_values(int *uyear, int *umonth, int *uday, int *uho
 
     /* return 0; */
 }
-#endif // TIME_HANDLER

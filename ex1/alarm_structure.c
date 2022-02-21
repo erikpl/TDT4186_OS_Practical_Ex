@@ -1,6 +1,3 @@
-#ifndef ALARM_STRUCTURE
-#define ALARM_STRUCTURE
-
 #include <stdio.h>
 #include <time.h>
 #include <unistd.h>
@@ -20,20 +17,24 @@ typedef struct Alarm {
 
 // To read how to format a tmStruct, read documentation: https://www.tutorialspoint.com/c_standard_library/time_h.htm
 // Create a tm_struct of the user-input
-void create_new_alarm(struct Alarm *alarm, pid_t pid, int *uyear, int *umonth, int *uday, int *uhour, int *uminute, int *usecond) {
+struct Alarm CreateNewAlarm(pid_t pid, int *uyear, int *umonth, int *uday, int *uhour, int *uminute, int *usecond) {
+
+   // Init alarm
+   Alarm alarm; 
+
    // Create time-struct using user-input
-   alarm -> tm_struct.tm_sec = *usecond;
-   alarm -> tm_struct.tm_min = *uminute;
-   alarm -> tm_struct.tm_hour = *uhour + 1;
-   alarm -> tm_struct.tm_mday = *uday;
-   alarm -> tm_struct.tm_mon = *umonth - 1;
-   alarm -> tm_struct.tm_year = *uyear - 1900;
-   alarm -> pid = pid;
+   alarm.tm_struct.tm_sec = *usecond;
+   alarm.tm_struct.tm_min = *uminute;
+   alarm.tm_struct.tm_hour = *uhour;
+   alarm.tm_struct.tm_mday = *uday;
+   alarm.tm_struct.tm_mon = *umonth - 1;
+   alarm.tm_struct.tm_year = *uyear - 1900;
+   alarm.pid = pid;
 
    // Create time_t (long int) and time_repr (string) from the tm_struct
    time_t num_seconds;
-   num_seconds = mktime(&(*alarm).tm_struct);
-   alarm -> num_seconds = num_seconds;
-};
+   num_seconds = mktime(&alarm.tm_struct);
+   alarm.num_seconds = num_seconds;
 
-#endif // ALARM_STRUCTURE
+  return alarm;
+};
