@@ -15,7 +15,7 @@ void set_alarm(Alarm * alarm) {
 
     if (child_pid == 0) {
 
-        time_t current_time = current_time_as_secs();
+        time_t current_time = time(NULL);
 
         // Time to the alarm should ring = alarm_time - current_time
         int time_to_alarm = (int) difftime(alarm->num_seconds, current_time);

@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <time.h>
 #include <signal.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/wait.h>
 
-#include "alarm_structure.c"
-#include "alarm_handler.c"
-/* #include "time_handler.c" */
 
 #define SCHEDULE 's'
 #define LIST 'l'
@@ -12,26 +12,96 @@
 #define EXIT 'x'
 
 // Init variables
-int max_alarms = 3;
+int MAX_ALARMS = 3;
 int curr_alarm = 0;
 char choice;
 
+pid_t child_pid, parent_pid;
+
+// Initialize variables
+int uyear, umonth, uday, uhour, uminute, usecond;
+
+// Define the data structure for an alarm
+typedef struct Alarm {
+   struct tm tm_struct;
+   time_t num_seconds;
+   pid_t pid;
+} Alarm;
+
+
+// To read how to format a tmStruct, read documentation: https://www.tutorialspoint.com/c_standard_library/time_h.htm
+// Create a tm_struct of the user-input
+struct Alarm create_new_alarm(pid_t pid, int *uyear, int *umonth, int *uday, int *uhour, int *uminute, int *usecond) {
+
+   // Init alarm
+   Alarm alarm; 
+
+   // Create time-struct using user-input
+   alarm.tm_struct.tm_sec = *usecond;
+   alarm.tm_struct.tm_min = *uminute;
+   alarm.tm_struct.tm_hour = *uhour;
+   alarm.tm_struct.tm_mday = *uday;
+   alarm.tm_struct.tm_mon = *umonth - 1;
+   alarm.tm_struct.tm_year = *uyear - 1900;
+   alarm.pid = pid;
+
+   // Create time_t (long int) and time_repr (string) from the tm_struct
+   time_t num_seconds;
+   num_seconds = mktime(&alarm.tm_struct);
+   alarm.num_seconds = num_seconds;
+
+  return alarm;
+};
+void set_alarm(Alarm * alarm) {
+    parent_pid = getpid();
+
+    child_pid = fork();
+
+    if (child_pid == 0) {
+
+        time_t current_time = time(NULL);
+
+        // Time to the alarm should ring = alarm_time - current_time
+        int time_to_alarm = (int) difftime(alarm->num_seconds, current_time);
+
+        // Wait until the alarm should ring
+        sleep(time_to_alarm);
+
+        //Ring the alarm
+        #ifdef __linux__
+        // Does not work on WSL
+        execlp("mpg123", "mpg123", "alarm_fx.mp3", NULL);
+        #elif __APPLE__
+        execlp("afplay", "afplay", "alarm_fx.mp3", NULL);
+        #else
+        printf("Ring!\n");
+        #endif
+
+        // Exit the child process
+        exit(child_pid);
+    }
+    else {
+        alarm->pid=child_pid;
+     
+    }
+}
+
 int main() {
-    // time_t current_secs = current_time_as_secs();
-    // struct tm *current_time = tm_struct_from_time_t(&current_secs);
-    // printf("Welcome to the alarm clock! It is currently %04d-%02d-%02d %02d-%02d-%02d\n",
+    time_t current_secs = time(NULL);
+    struct tm *current_time = localtime(&current_secs);
+    printf("Welcome to the alarm clock! It is currently %04d-%02d-%02d %02d-%02d-%02d\n",
     // // Add 1900 since tm_year denotes years since 1900
-    // current_time -> tm_year + 1900,
+    current_time -> tm_year + 1900,
     // // Add 1 since tm_mon is 0-indexed
-    // current_time -> tm_mon + 1,
-    // current_time -> tm_mday,
-    // current_time -> tm_hour,
-    // current_time -> tm_min,
-    // current_time -> tm_sec);
+    current_time -> tm_mon + 1,
+    current_time -> tm_mday,
+    current_time -> tm_hour,
+    current_time -> tm_min,
+    current_time -> tm_sec);
 
 
     // Init array of alarms 
-    Alarm all_alarms[max_alarms];
+    Alarm all_alarms[MAX_ALARMS];
 
     //TODO Welcome the user with the current time
 
@@ -46,7 +116,7 @@ int main() {
         if (choice == SCHEDULE) {  
 
             // Check if we have room for more alarms
-            if (max_alarms == curr_alarm) {
+            if (MAX_ALARMS == curr_alarm) {
                 printf("\nCurrently at maximum amount of alarms\n");
                 continue;
             }
@@ -61,19 +131,13 @@ int main() {
             scanf("%d/%d/%d-%02d:%02d:%02d", &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
 
             // Create new alarm and add it to list of alarms. Then, iterate counter
-            all_alarms[curr_alarm] = CreateNewAlarm(child_pid, &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
-
-            //Printer child_pid, bare for å sjekke
-            printf("The pid is: %d ", child_pid);
+            all_alarms[curr_alarm] = create_new_alarm(child_pid, &uyear, &umonth, &uday, &uhour, &uminute, &usecond);
 
             // Print information about the new alarm
             printf("\nAlarm scheduled at %s", ctime(&all_alarms[curr_alarm].num_seconds));
 
             //Set the alarm for the right time
             set_alarm(&all_alarms[curr_alarm]);
-
-            printf("%d ", all_alarms[curr_alarm].pid);
-
           
             // Iterate counter, letting us populate next slot in all_alarms array
             curr_alarm ++;
