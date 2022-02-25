@@ -5,20 +5,20 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 
-
+// Defining choice constants to make the code more readable
 #define SCHEDULE 's'
 #define LIST 'l'
 #define CANCEL 'c'
 #define EXIT 'x'
 
-// Init variables
+// Init constants and variables
 int MAX_ALARMS = 3;
 int curr_alarm = 0;
 char choice;
 
 pid_t child_pid, parent_pid;
 
-// Initialize variables
+// Initialize time variables
 int uyear, umonth, uday, uhour, uminute, usecond;
 
 // Define the data structure for an alarm
@@ -52,13 +52,17 @@ struct Alarm create_new_alarm(pid_t pid, int *uyear, int *umonth, int *uday, int
 
   return alarm;
 };
-void set_alarm(Alarm * alarm) {
-    parent_pid = getpid();
 
+void set_alarm(Alarm * alarm) {
+    // getpid() retrieves the PID of the soon-to-be parent process
+    parent_pid = getpid();
+    // 0 if run from the child process
+    // child_pid if run from the parent process
     child_pid = fork();
 
+    // If run from the child process
     if (child_pid == 0) {
-
+        // Current time as a time_t
         time_t current_time = time(NULL);
 
         // Time to the alarm should ring = alarm_time - current_time
@@ -71,6 +75,7 @@ void set_alarm(Alarm * alarm) {
         #ifdef __linux__
         // Does not work on WSL
         execlp("mpg123", "mpg123", "alarm_fx.mp3", NULL);
+        // If ran on a Mac
         #elif __APPLE__
         execlp("afplay", "afplay", "alarm_fx.mp3", NULL);
         #else
@@ -82,12 +87,13 @@ void set_alarm(Alarm * alarm) {
     }
     else {
         alarm->pid=child_pid;
-     
     }
 }
 
 int main() {
+    // Current time in seconds
     time_t current_secs = time(NULL);
+    // Current time as a struct
     struct tm *current_time = localtime(&current_secs);
     printf("Welcome to the alarm clock! It is currently %04d-%02d-%02d %02d-%02d-%02d\n",
     // // Add 1900 since tm_year denotes years since 1900
@@ -99,17 +105,15 @@ int main() {
     current_time -> tm_min,
     current_time -> tm_sec);
 
-
     // Init array of alarms 
     Alarm all_alarms[MAX_ALARMS];
-
-    //TODO Welcome the user with the current time
 
     while (choice != EXIT) {
         // Let the user choose what action to complete
         printf("\nPlease enter 's' (schedule), 'l' (list), 'c' (cancel), 'x' (exit): \n");
         scanf(" %c", &choice);
 
+        // Killing zombies!
         waitpid(-1, 0, WNOHANG);
 
         // If the user chooses to schedule an alarm
@@ -165,14 +169,14 @@ int main() {
             scanf("%d", &cancel_pos);
 
             // Make sure the user inputs a valid position
-            if(cancel_pos < 0 || cancel_pos > curr_alarm)
-            {
+            if (cancel_pos < 0 || cancel_pos > curr_alarm) {
                 printf("Invalid position! Please enter position between 1 to %d\n", curr_alarm);
             }
-            else
-            {
+            else {
                 printf("\n %d \n", all_alarms[cancel_pos-1].pid);
+                // Flush the standard output
                 fflush(stdout);
+                // Terminate the alarm
                 kill(all_alarms[cancel_pos-1].pid, SIGKILL);
 
                 // Deletes the alarm at cancel_pos by copying over all alarms to the right
