@@ -1,9 +1,9 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<string.h>	
-#include<sys/socket.h>
-#include<arpa/inet.h>	
-#include<unistd.h>	
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>	
+#include <sys/socket.h>
+#include <arpa/inet.h>	
+#include <unistd.h>	
 #include <errno.h>
 
 #define BUFFER_SIZE 20000
@@ -13,11 +13,14 @@
 // TODO: Legge til håndtering og bruk av command line arguments
 /* Called using ./mtwwwd www_path port #threads #bufferslots */
 int main(int argc , char *argv[]) {
-	char WWW_PATH;
 
 	/* Handling WWW_PATH from the command line */
+	/* TODO: validering av path, spesielt mtp. trailing slash, burde legges til her */
 	if (argv[1]) {
-		WWW_PATH = argv[1];
+		char* WWW_PATH = (char*) NULL;
+		int www_path_len = strlen(argv[1]);
+		bzero(WWW_PATH, www_path_len + 1);
+		strncpy(WWW_PATH, argv[1], www_path_len);
 		printf("Serving the path %s\n", WWW_PATH);
 	}
 	else {
@@ -26,10 +29,10 @@ int main(int argc , char *argv[]) {
 	}
 
 	/* Handling PORT from the command_line. */
-
 	int PORT;
 	if (argv[2]) {
-		PORT = argv[2];
+		// PORT should, admittedly, be an unsigned type, but this will suffice
+		PORT = (int) strtol(argv[2], NULL, 10);
 		printf("Accepting connection on port number %d", PORT);
 	}
 	else {
@@ -37,6 +40,7 @@ int main(int argc , char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
+	/* TODO: Legg til håndtering av #threads og #bufferslots */
 	while (1) {
 		int socket_desc, client_socket, c, read_size, n;
 		struct sockaddr_in server , client;
@@ -44,6 +48,7 @@ int main(int argc , char *argv[]) {
 
 		long numbytes;
 
+		// TODO: Må vi free source siden den ikke er dynamisk allokert?
 		char *source = NULL;
 		FILE *file_pointer = fopen("/index.html", "r");
 
@@ -64,7 +69,7 @@ int main(int argc , char *argv[]) {
 				size_t new_length = fread(source, sizeof(char), bufsize, file_pointer);
 
 				if (ferror(file_pointer) != 0) {
-					file_pointeruts("Error reading file", stderr);
+					fprintf(stderr, "Error reading file");
 				} 
 				else {
 					source[new_length + 1] = '\0'; /* Just to be safe. */
