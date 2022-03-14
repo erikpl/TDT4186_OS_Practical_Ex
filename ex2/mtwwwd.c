@@ -10,12 +10,13 @@
 #define SIZE 1024
 #define CONNECTION_QUEUE_LIMIT 5
 
-// TODO: Legge til håndtering og bruk av command line arguments
 /* Called using ./mtwwwd www_path port #threads #bufferslots */
+/* TODO: Hente ut request_path fra HTTP GET Request-en */
 int main(int argc , char *argv[]) {
-
 	/* Handling WWW_PATH from the command line */
-	/* TODO: validering av path, spesielt mtp. trailing slash, burde legges til her */
+	/* TODO: validering av path, spesielt mtp. trailing slash, burde legges til her.
+	*  I tillegg er det viktig å huske at Unix og Windows bruker ulike formater 
+	*/
 	if (argv[1]) {
 		char* WWW_PATH = (char*) NULL;
 		int www_path_len = strlen(argv[1]);
@@ -40,18 +41,59 @@ int main(int argc , char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
+	// Create the socket
+	int socket_desc = socket(AF_INET, SOCK_STREAM, 0);
+	// Checking if socket was successfully created
+	if (socket_desc == -1) {
+		printf("Could not create socket");
+		exit(EXIT_FAILURE);
+	}
+	puts("Socket created");
+
+	struct sockaddr_in server;
+
+	// Initializing the sockaddr_in structure
+	server.sin_family = AF_INET;
+	server.sin_port = htons(PORT);
+	server.sin_addr.s_addr = INADDR_ANY;
+
+	// Assinging an address to the socket using bind
+	if (bind(socket_desc, (struct sockaddr *)&server, sizeof(server)) < 0) {
+		perror("Bind failed. Error");
+		exit(EXIT_FAILURE);
+	}
+
+	puts("Bind successfull");
+
+	// Prepares the socket for connection requests
+	listen(socket_desc, CONNECTION_QUEUE_LIMIT);
+
 	/* TODO: Legg til håndtering av #threads og #bufferslots */
 	while (1) {
-		int socket_desc, client_socket, c, read_size, n;
-		struct sockaddr_in server , client;
+		int client_socket, read_size, n;
+		struct sockaddr_in client;
 		char client_message[BUFFER_SIZE];
+		// Make sure the contents of client_message are empty before proceeding
+		bzero(client_message, BUFFER_SIZE + 1);
 
 		long numbytes;
+		
+		puts("Waiting for incoming connections...");
+		int socket_size = sizeof(struct sockaddr_in);
+		// Accept a connection from an incoming client
+		client_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&socket_size);
+
+		// Checks if client socket was created successfully
+		if (client_socket < 0) {
+			perror("Error on accept");
+		}
+		puts("Connection accepted");
 
 		// TODO: Må vi free source siden den ikke er dynamisk allokert?
 		char *source = NULL;
 		FILE *file_pointer = fopen("/index.html", "r");
 
+		/* TODO: Finne ut hvordan vi skal hente ut request_path */
 		if (file_pointer != NULL) {
 			/* Go to the end of the file. */
 			if (fseek(file_pointer, 0L, SEEK_END) == 0) {
@@ -79,56 +121,14 @@ int main(int argc , char *argv[]) {
 		}
 		free(source);
 
-		// Create the socket
-		socket_desc = socket(AF_INET, SOCK_STREAM, 0);
-
-		// Checking if socket was successfully created
-		if (socket_desc == -1) {
-			printf("Could not create socket");
-			exit(EXIT_FAILURE);
-		}
-
-		puts("Socket created");
-
-		//Initializing the sockaddr_in structure
-		server.sin_family = AF_INET;
-		server.sin_port = htons(PORT);
-		server.sin_addr.s_addr = INADDR_ANY;
-		
-		//Assinging an address to the socket using bind
-		if(bind(socket_desc, (struct sockaddr *)&server, sizeof(server)) < 0) {
-			perror("Bind failed. Error");
-			exit(EXIT_FAILURE);
-		}
-
-		puts("Bind successfull");
-		
-		//Prepares the socket for connection requests
-		listen(socket_desc, CONNECTION_QUEUE_LIMIT);
-		
-		puts("Waiting for incoming connections...");
-
-		// Denne burde vi virkelig kalle noe annet
-		c = sizeof(struct sockaddr_in);
-		
-		// Accept a connection from an incoming client
-		client_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c);
-
-		// Checks if client socket was created successfully
-		if (client_socket < 0) {
-			perror("Error on accept");
-		}
-		puts("Connection accepted");
-
-
 		// Read data from client
-		n = read (client_socket, client_message, sizeof(client_message)-1);
+		n = read(client_socket, client_message, sizeof(client_message)-1);
 
 		if (n < 0) {
 			puts("Error reading from client socket");
 		}
 		
-		//Receive a message from client
+		// Receive a message from client
 		while ((read_size = recv(client_socket , client_message , 2000 , 0)) > 0 ) {
 				n = write(client_socket, source, strlen(source));
 		}
