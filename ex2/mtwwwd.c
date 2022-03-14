@@ -13,44 +13,44 @@
 // TODO: Legge til connection loop
 int main(int argc , char *argv[])
 {
-	int socket_desc, client_socket, c , read_size, n;
+	int socket_desc, client_socket, c, read_size, n;
 	struct sockaddr_in server , client;
 	char client_message[BUFFER_SIZE];
 
 	long numbytes;
 
 	char *source = NULL;
-	FILE *fp = fopen("/index.html", "r");
+	FILE *file_pointer = fopen("/index.html", "r");
 
-	if (fp != NULL) {
+	if (file_pointer != NULL) {
 		/* Go to the end of the file. */
-		if (fseek(fp, 0L, SEEK_END) == 0) {
+		if (fseek(file_pointer, 0L, SEEK_END) == 0) {
 			/* Get the size of the file. */
-			long bufsize = ftell(fp);
+			long bufsize = ftell(file_pointer);
 			if (bufsize == -1) { /* Error */ }
 
 			/* Allocate our buffer to that size. */
 			source = malloc(sizeof(char) * (bufsize + 1));
 
 			/* Go back to the start of the file. */
-			if (fseek(fp, 0L, SEEK_SET) != 0) { /* Error */ }
+			if (fseek(file_pointer, 0L, SEEK_SET) != 0) { /* Error */ }
 
 			/* Read the entire file into memory. */
-			size_t newLen = fread(source, sizeof(char), bufsize, fp);
+			size_t new_length = fread(source, sizeof(char), bufsize, file_pointer);
 
-			if (ferror( fp ) != 0) {
-				fputs("Error reading file", stderr);
+			if (ferror(file_pointer) != 0) {
+				file_pointeruts("Error reading file", stderr);
 			} 
 			else {
-				source[newLen++] = '\0'; /* Just to be safe. */
+				source[new_length++] = '\0'; /* Just to be safe. */
 			}
 		}
-		fclose(fp);
+		fclose(file_pointer);
 	}
 	free(source);
 
 	//Create the socket
-	socket_desc = socket(AF_INET , SOCK_STREAM , 0);
+	socket_desc = socket(AF_INET, SOCK_STREAM, 0);
 
 	//Checking if socket was successfully created
 	if (socket_desc == -1) {
@@ -65,7 +65,7 @@ int main(int argc , char *argv[])
 	server.sin_addr.s_addr = INADDR_ANY;
 	
 	//Assinging an address to the socket using bind
-	if(bind(socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0) {
+	if(bind(socket_desc, (struct sockaddr *)&server, sizeof(server)) < 0) {
 		perror("Bind failed. Error");
 		exit(EXIT_FAILURE);
 	}
@@ -73,7 +73,7 @@ int main(int argc , char *argv[])
 	puts("Bind successfull");
 	
 	//Prepares the socket for connection requests
-	listen(socket_desc , 5);
+	listen(socket_desc, 5);
 	
 	puts("Waiting for incoming connections...");
 
