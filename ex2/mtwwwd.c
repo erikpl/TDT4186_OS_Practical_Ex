@@ -6,9 +6,10 @@
 #include<unistd.h>	
 #include <errno.h>
 
-#define BUFFER_SIZE 2000
+#define BUFFER_SIZE 20000
 #define SIZE 1024
 #define PORT 8111
+#define CONNECTION_QUEUE_LIMIT
 
 // TODO: Legge til connection loop
 int main(int argc , char *argv[])
@@ -42,19 +43,20 @@ int main(int argc , char *argv[])
 				file_pointeruts("Error reading file", stderr);
 			} 
 			else {
-				source[new_length++] = '\0'; /* Just to be safe. */
+				source[new_length + 1] = '\0'; /* Just to be safe. */
 			}
 		}
 		fclose(file_pointer);
 	}
 	free(source);
 
-	//Create the socket
+	// Create the socket
 	socket_desc = socket(AF_INET, SOCK_STREAM, 0);
 
-	//Checking if socket was successfully created
+	// Checking if socket was successfully created
 	if (socket_desc == -1) {
 		printf("Could not create socket");
+		exit(EXIT_FAILURE);
 	}
 
 	puts("Socket created");
@@ -73,25 +75,24 @@ int main(int argc , char *argv[])
 	puts("Bind successfull");
 	
 	//Prepares the socket for connection requests
-	listen(socket_desc, 5);
+	listen(socket_desc, CONNECTION_QUEUE_LIMIT);
 	
 	puts("Waiting for incoming connections...");
 
-
+	// Denne burde vi virkelig kalle noe annet
 	c = sizeof(struct sockaddr_in);
 	
-	//Accept a connection from an incoming client
+	// Accept a connection from an incoming client
 	client_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c);
 
-	//Checks if client socket was created successfully
+	// Checks if client socket was created successfully
 	if (client_socket < 0) {
 		perror("Error on accept");
-		exit(EXIT_FAILURE);
 	}
 	puts("Connection accepted");
 
 
-	//Read data from client
+	// Read data from client
 	n = read (client_socket, client_message, sizeof(client_message)-1);
 
 	if (n < 0) {
