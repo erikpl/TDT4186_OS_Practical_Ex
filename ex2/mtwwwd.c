@@ -74,7 +74,7 @@ int main(int argc , char *argv[]) {
 		struct sockaddr_in client;
 		char client_message[BUFFER_SIZE];
 		// Make sure the contents of client_message are empty before proceeding
-		bzero(client_message, BUFFER_SIZE + 1);
+		bzero(client_message, BUFFER_SIZE);
 
 		long numbytes;
 		
