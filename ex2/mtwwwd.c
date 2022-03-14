@@ -8,11 +8,35 @@
 
 #define BUFFER_SIZE 20000
 #define SIZE 1024
-#define PORT 8111
-#define CONNECTION_QUEUE_LIMIT
+#define CONNECTION_QUEUE_LIMIT 5
 
-// TODO: Legge til connection loop
+// TODO: Legge til håndtering og bruk av command line arguments
+/* Called using ./mtwwwd www_path port #threads #bufferslots */
 int main(int argc , char *argv[]) {
+	char WWW_PATH;
+
+	/* Handling WWW_PATH from the command line */
+	if (argv[1]) {
+		WWW_PATH = argv[1];
+		printf("Serving the path %s\n", WWW_PATH);
+	}
+	else {
+		fprintf(stderr, "Did not find WWW_PATH.\nTry calling again using ./mtwwwd www_path port #threads #bufferslots\n");
+		exit(EXIT_FAILURE);
+	}
+
+	/* Handling PORT from the command_line. */
+
+	int PORT;
+	if (argv[2]) {
+		PORT = argv[2];
+		printf("Accepting connection on port number %d", PORT);
+	}
+	else {
+		fprintf(stderr, "Did not find PORT.\nTry calling again using ./mtwwwd www_path port #threads #bufferslots\n");
+		exit(EXIT_FAILURE);
+	}
+
 	while (1) {
 		int socket_desc, client_socket, c, read_size, n;
 		struct sockaddr_in server , client;
