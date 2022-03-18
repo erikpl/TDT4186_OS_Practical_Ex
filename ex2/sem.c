@@ -120,6 +120,7 @@ void P(SEM *sem) {
     while ((sem -> counter) <= 0) {
         /* Atomically blocks using the semaphore's condition variable.
          * The calling thread will only resume when another thread signals.
+         * Will lead to checking the counter variable again.
          * Ignores the return variable.
         */
         pthread_cond_wait(&(sem -> condition), &(sem -> mutex));
