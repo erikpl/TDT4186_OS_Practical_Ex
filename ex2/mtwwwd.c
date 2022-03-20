@@ -21,6 +21,8 @@ int main(int argc , char *argv[]) {
 	long numbytes;
 	char source[500];
 
+	// TODO test the path
+
 	/* Handling WWW_PATH from the command line */
 	if (argv[1]) {
 		WWW_PATH = argv[1];
@@ -32,7 +34,6 @@ int main(int argc , char *argv[]) {
 	}
 
 	/* Handling PORT from the command_line. */
-
 	int PORT;
 	if (argv[2]) {
 		PORT = atoi(argv[2]);
@@ -44,19 +45,16 @@ int main(int argc , char *argv[]) {
 	}
 
 	while (1) {
-	
-
 		//Open the file to read from
-		FILE *in_file = fopen("index.html", "r");
+		FILE *in_file = fopen(WWW_PATH, "r");
 
 		// Stat is a structure that is defined to store information about the file 
 		struct stat sb;
-		stat("index.html", &sb);
+		stat(WWW_PATH, &sb);
 
 		// Creates a read-only string with the same size of the file
 		char *file_contents = malloc(sb.st_size);
 
-	
 		// Create the socket
 		socket_desc = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -66,14 +64,22 @@ int main(int argc , char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 
+		// Exiting socket if already taken
+		if (setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0) {
+			perror("setsockopt(SO_REUSEADDR) failed");
+			exit(EXIT_FAILURE);
+		}
+
 		puts("Socket created");
 
 		//Initializing the sockaddr_in structure
 		server.sin_family = AF_INET;
-		server.sin_port = htons(8182);
+		server.sin_port = htons(PORT);
 		server.sin_addr.s_addr = INADDR_ANY;
 		
-		//Assinging an address to the socket using bind
+		int yes = 1;
+
+		// Assinging an address to the socket using bind
 		if(bind(socket_desc, (struct sockaddr *)&server, sizeof(server)) < 0) {
 			perror("Bind failed. Error");
 			exit(EXIT_FAILURE);
@@ -81,7 +87,7 @@ int main(int argc , char *argv[]) {
 
 		puts("Bind successfull");
 		
-		//Prepares the socket for connection requests
+		// Prepares the socket for connection requests
 		listen(socket_desc, CONNECTION_QUEUE_LIMIT);
 		
 		puts("Waiting for incoming connections...");
@@ -107,15 +113,17 @@ int main(int argc , char *argv[]) {
 		}
 		puts("Connection accepted");
 
-
 		// Read data from client
 		n = read (client_socket, client_message, sizeof(client_message)-1);
 
 		if (n < 0) {
 			puts("Error reading from client socket");
 		}
-		
-		//Receive a message from client
+
+		/* send(socket_desc, test_html, strlen(test_html), 0);
+		puts("sent html."); */
+	
+		// Receive a message from client
 		while ((read_size = recv(client_socket , client_message , 2000 , 0)) > 0 ) {
 				n = write(client_socket, source, strlen(source));
 		}
@@ -131,5 +139,6 @@ int main(int argc , char *argv[]) {
 		
 		//Closes the client socket
 		close(client_socket);
-}
 
+	exit(EXIT_SUCCESS);
+}
