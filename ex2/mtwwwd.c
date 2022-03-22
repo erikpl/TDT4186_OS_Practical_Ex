@@ -132,7 +132,7 @@ int main(int argc , char *argv[]) {
 		// Denne burde vi virkelig kalle noe annet
 		c = sizeof(struct sockaddr_in);
 		
-		//! THis is the loop for creating a new connection
+		// This is the loop for creating a new connection
 		while (1) {
 
 			
@@ -156,7 +156,7 @@ int main(int argc , char *argv[]) {
 			// puts(total_path_ext);
 			//Open the file to read from
 
-			// TODO denne lesingen av filer ønsker vi å gjøre i en egen funksjon
+			// TODO START. denne lesingen av filer ønsker vi å gjøre i en egen funksjon
 			FILE *in_file = fopen(WWW_PATH, "r");
 
 			// Stat is a structure that is defined to store information about the file 
@@ -166,12 +166,13 @@ int main(int argc , char *argv[]) {
 			// Creates a read-only string with the same size of the file
 			char *file_contents = malloc(sb.st_size);
 			
+			// TODO denne måten å skrive data på lar oss ikke serve til en nettleser. Står spesifikt at vi må kunne gjøre det i oppgaven.
 			// While the file is not empty, write every line to the socket
 			while (fgets(file_contents, sb.st_size, in_file)!=NULL) {
 				write(client_socket, file_contents, strlen(file_contents));
 			}
 			fclose(in_file);
-			// TODO Fra forrige kommentar og ned hit skal bli en egen funksjon
+			// TODO END. Fra kommentar over (START) og ned hit skal bli en egen funksjon
 
 			close(client_socket);
 
