@@ -45,19 +45,27 @@ SEM *sem_init(int initVal) {
     *  pthread_mutex_init returns an integer not equal to zero of an error occurred.
     *  https://pubs.opengroup.org/onlinepubs/7908799/xsh/pthread_mutex_init.html
     */
-    if (pthread_mutex_init(&(semaphore -> mutex), NULL) != 0) {
-        /* Returns NULL if an error occurred */
+    pthread_mutex_t mutex;
+    if (pthread_mutex_init(&mutex, NULL) != 0) {
+        /* Frees semaphore if error occurred. */
+        free(semaphore);
+        /* Returns NULL if an error occurred. */
         return NULL;
     }
-
+    semaphore -> mutex = mutex;
     /* Initialize the condition to an empty condition 
     *  pthread_cond_init returns an integer not equal to zero of an error occurred.
     *  https://pubs.opengroup.org/onlinepubs/7908799/xsh/pthread_cond_init.html
     */
-    if (pthread_cond_init(&(semaphore -> condition), NULL) != 0) {
-        /* Returns NULL if an error occurred */
+    pthread_cond_t condition;
+    if (pthread_cond_init(&condition, NULL) != 0) {
+        /* Frees semaphore if error occurred. */
+        free(semaphore);
+        /* Returns NULL if an error occurred. */
         return NULL;
     }
+
+    semaphore -> condition = condition;
 
     return semaphore;
 }
