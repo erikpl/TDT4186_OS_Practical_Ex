@@ -6,10 +6,57 @@
 #include<unistd.h>	
 #include <errno.h>
 #include <sys/stat.h>
+#include <ctype.h>
 
 #define BUFFER_SIZE 20000
 #define SIZE 1024
 #define CONNECTION_QUEUE_LIMIT 5
+
+// Function to parse and return the data from a request
+const char* request_string(char *buf, int size) {
+	int read_start = 0;
+	int read_stop = 0;
+	int data_index = 0;
+	char data[512];
+	int i = size;
+
+	// Loop through request
+	for (i; i > -1 ; i--) {
+		
+		// When first finding a char, start writing
+		if (isalpha(buf[i])) {
+			read_start = 1;
+		}
+		
+		// TODO endre denne til å sjekke for "/" i stedet for 0. Da kan vi lese et filnavn. Bytte denne kodeblokken med // write to char array så blir det riktig
+		// Stop reading when finding a space
+		if (isalpha(buf[i]) == 0 && read_start == 1) {
+			printf("i %d read start%d, char %d ", i, read_start, isalpha(buf[i]));
+			read_stop = 1;
+		}
+		
+		// write to char array
+		if ((read_start == 1) && (read_stop == 0)) {
+			data[data_index] = buf[i];
+			data_index++;
+		}
+
+		// stop reading
+		if ((read_start == 1) && (read_stop == 1)) {
+			break;
+		}
+	}
+
+	// Reverse string
+	char string_done[500];
+	for(i=0; i < strlen(data); ++i) {
+			string_done[strlen(data) -i-1] = data[i];
+		}
+	
+	// Letting our string be returned
+	const char * res = string_done;
+	return res;
+}
 
 // TODO: Legge til håndtering og bruk av command line arguments
 /* Called using ./mtwwwd www_path port #threads #bufferslots */
@@ -37,23 +84,12 @@ int main(int argc , char *argv[]) {
 	int PORT;
 	if (argv[2]) {
 		PORT = atoi(argv[2]);
-		printf("Accepting connection on port number %d", PORT);
+		printf("Accepting connection on port number %d\n", PORT);
 	}
 	else {
 		fprintf(stderr, "Did not find PORT.\nTry calling again using ./mtwwwd www_path port #threads #bufferslots\n");
 		exit(EXIT_FAILURE);
 	}
-
-	while (1) {
-		//Open the file to read from
-		FILE *in_file = fopen(WWW_PATH, "r");
-
-		// Stat is a structure that is defined to store information about the file 
-		struct stat sb;
-		stat(WWW_PATH, &sb);
-
-		// Creates a read-only string with the same size of the file
-		char *file_contents = malloc(sb.st_size);
 
 		// Create the socket
 		socket_desc = socket(AF_INET, SOCK_STREAM, 0);
@@ -64,22 +100,23 @@ int main(int argc , char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 
-		// Exiting socket if already taken
-		if (setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0) {
+		// Resetting socket timeout, letting us reuse a port.
+		int yes = 1;
+		if (setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes))) {
 			perror("setsockopt(SO_REUSEADDR) failed");
 			exit(EXIT_FAILURE);
 		}
-
+		
 		puts("Socket created");
 
+		// TODO Her er det vi ønsker å legge til multithreading
+		while (1) {
 		//Initializing the sockaddr_in structure
 		server.sin_family = AF_INET;
 		server.sin_port = htons(PORT);
 		server.sin_addr.s_addr = INADDR_ANY;
-		
-		int yes = 1;
 
-		// Assinging an address to the socket using bind
+		// Assinging an address to the socket using bind		
 		if(bind(socket_desc, (struct sockaddr *)&server, sizeof(server)) < 0) {
 			perror("Bind failed. Error");
 			exit(EXIT_FAILURE);
@@ -95,50 +132,52 @@ int main(int argc , char *argv[]) {
 		// Denne burde vi virkelig kalle noe annet
 		c = sizeof(struct sockaddr_in);
 		
-		// Accept a connection from an incoming client
-		client_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c);
+		//! THis is the loop for creating a new connection
+		while (1) {
 
-		// While the file is not empty, write every line to the socket
-		while (fgets(file_contents, sb.st_size, in_file)!=NULL) {
-		write(client_socket, file_contents, strlen(file_contents));
-		}
+			
+			// Accept a connection from an incoming client. Does not proceeed from here before api-call.
+			client_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c);
+			
+			puts("New transmission started.");
 
-		// Close the file after use
-		fclose(in_file);
+			// Recieve an incoming request
+			char buf[512];
+    		int recc = recv(client_socket, buf, sizeof buf, 0);
+			
+			// TODO kommentert ut fordi det er en feil i pointers. Må fikses.
+			// Parsing and fixing the request to get desired file
+			// const char* file_path = request_string(buf, sizeof buf);
+			// puts(file_path);
+
+			// const char* total_path = strcat(WWW_PATH,  file_path);
+			// const char* total_path_ext = strcat(total_path, ".html");
+
+			// puts(total_path_ext);
+			//Open the file to read from
+
+			// TODO denne lesingen av filer ønsker vi å gjøre i en egen funksjon
+			FILE *in_file = fopen(WWW_PATH, "r");
+
+			// Stat is a structure that is defined to store information about the file 
+			struct stat sb;
+			stat(WWW_PATH, &sb);
+
+			// Creates a read-only string with the same size of the file
+			char *file_contents = malloc(sb.st_size);
+			
+			// While the file is not empty, write every line to the socket
+			while (fgets(file_contents, sb.st_size, in_file)!=NULL) {
+				write(client_socket, file_contents, strlen(file_contents));
 			}
+			fclose(in_file);
+			// TODO Fra forrige kommentar og ned hit skal bli en egen funksjon
 
-		// Checks if client socket was created successfully
-		if (client_socket < 0) {
-			perror("Error on accept");
+			close(client_socket);
+
+			puts("Transmission finished. Socket closed.");
 		}
-		puts("Connection accepted");
-
-		// Read data from client
-		n = read (client_socket, client_message, sizeof(client_message)-1);
-
-		if (n < 0) {
-			puts("Error reading from client socket");
 		}
 
-		/* send(socket_desc, test_html, strlen(test_html), 0);
-		puts("sent html."); */
-	
-		// Receive a message from client
-		while ((read_size = recv(client_socket , client_message , 2000 , 0)) > 0 ) {
-				n = write(client_socket, source, strlen(source));
-		}
-		
-		if (read_size == 0) {
-			puts("Client disconnected");
-			fflush(stdout);
-		}
-
-		else if  (read_size == -1){
-			perror("recv failed");
-		}
-		
-		//Closes the client socket
-		close(client_socket);
-
-	exit(EXIT_SUCCESS);
+	// exit(EXIT_SUCCESS);
 }
