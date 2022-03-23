@@ -19,7 +19,7 @@ int main(int argc , char *argv[]) {
 	struct sockaddr_in server , client;
 	char client_message[BUFFER_SIZE];
 	long numbytes;
-	char source[500];
+	char source[600];
 
 	// TODO test the path
 
@@ -53,7 +53,7 @@ int main(int argc , char *argv[]) {
 		stat(WWW_PATH, &sb);
 
 		// Creates a read-only string with the same size of the file
-		char *file_contents = malloc(sb.st_size);
+		char *file_contents = malloc(sb.st_size+1);
 
 		// Create the socket
 		socket_desc = socket(AF_INET, SOCK_STREAM, 0);
@@ -98,10 +98,13 @@ int main(int argc , char *argv[]) {
 		// Accept a connection from an incoming client
 		client_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c);
 
+		read(fileno(in_file), file_contents, sb.st_size );
+		printf(" %s",file_contents);
+
 		// While the file is not empty, write every line to the socket
-		while (fgets(file_contents, sb.st_size, in_file)!=NULL) {
+
 		write(client_socket, file_contents, strlen(file_contents));
-		}
+	
 
 		// Close the file after use
 		fclose(in_file);
