@@ -166,7 +166,7 @@ int main(int argc , char *argv[]) {
 			// Creates a read-only string with the same size of the file
 			char *file_contents = malloc(sb.st_size);
 			
-			// TODO denne måten å skrive data på lar oss ikke serve til en nettleser. Står spesifikt at vi må kunne gjøre det i oppgaven.
+			// TODO denne måten å skrive data på lar oss ikke serve til en nettleser. Står spesifikt at vi må kunne gjøre det i oppgaven. Må returnere en HTTP/0.9 response.
 			// While the file is not empty, write every line to the socket
 			while (fgets(file_contents, sb.st_size, in_file)!=NULL) {
 				write(client_socket, file_contents, strlen(file_contents));
