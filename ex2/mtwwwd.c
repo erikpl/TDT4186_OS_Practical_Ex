@@ -2,15 +2,41 @@
 #include<stdlib.h>
 #include<string.h>	
 #include<sys/socket.h>
-#include<arpa/inet.h>	
+#include <arpa/inet.h>	
 #include<unistd.h>	
 #include <errno.h>
 #include <sys/stat.h>
 #include <ctype.h>
+#include <fcntl.h>
 
 #define BUFFER_SIZE 20000
 #define SIZE 1024
 #define CONNECTION_QUEUE_LIMIT 5
+
+
+// Function that reads from a file and returns a string with the file contents
+char * read_from_file(char *filename) {
+
+	// Open the file to read from
+	int in_file = open(filename, O_RDONLY);
+
+    // Stat is a structure that is defined to store information about the file 
+    struct stat sb;
+    stat(filename, &sb);
+
+    // Creates a read-only string with the same size of the file
+    char *file_contents = malloc(sb.st_size);
+
+	// Reads the file contents
+	read(in_file, file_contents, sb.st_size);
+
+	// Returns the file contents as a char * 
+	return file_contents;
+
+	close(in_file);
+	
+}
+
 
 // Function to parse and return the data from a request
 const char* request_string(char *buf, int size) {
@@ -60,9 +86,9 @@ const char* request_string(char *buf, int size) {
 
 // TODO: Legge til håndtering og bruk av command line arguments
 /* Called using ./mtwwwd www_path port #threads #bufferslots */
-int main(int argc , char *argv[]) {
+int main(int argc , char * argv[]) {
 	char *WWW_PATH;
-	int socket_desc, client_socket, c, read_size, n;
+	int server_socket, client_socket, c, read_size, n;
 	struct sockaddr_in server , client;
 	char client_message[BUFFER_SIZE];
 	long numbytes;
@@ -70,7 +96,7 @@ int main(int argc , char *argv[]) {
 
 	// TODO test the path
 
-	/* Handling WWW_PATH from the command line */
+	// Handling WWW_PATH from the command line 
 	if (argv[1]) {
 		WWW_PATH = argv[1];
 		printf("Serving the path %s\n", WWW_PATH);
@@ -80,7 +106,7 @@ int main(int argc , char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
-	/* Handling PORT from the command_line. */
+	// Handling PORT from the command_line. 
 	int PORT;
 	if (argv[2]) {
 		PORT = atoi(argv[2]);
@@ -91,44 +117,34 @@ int main(int argc , char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
-	while (1) {
-		//Open the file to read from
-		FILE *in_file = fopen(WWW_PATH, "r");
+	// Create the socket
+	server_socket = socket(AF_INET, SOCK_STREAM, 0);
 
-		// Stat is a structure that is defined to store information about the file 
-		struct stat sb;
-		stat(WWW_PATH, &sb);
+	// Checking if socket was successfully created
+	if (server_socket == -1) {
+		perror("Could not create socket");
+		exit(EXIT_FAILURE);
+	}
 
-		// Creates a read-only string with the same size of the file
-		char *file_contents = malloc(sb.st_size+1);
-
-		// Create the socket
-		socket_desc = socket(AF_INET, SOCK_STREAM, 0);
-
-		// Checking if socket was successfully created
-		if (socket_desc == -1) {
-			printf("Could not create socket");
-			exit(EXIT_FAILURE);
-		}
-
-		// Resetting socket timeout, letting us reuse a port.
-		int yes = 1;
-		if (setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes))) {
-			perror("setsockopt(SO_REUSEADDR) failed");
-			exit(EXIT_FAILURE);
-		}
+	// Resetting socket timeout, letting us reuse a port.
+	int yes = 1;
+	if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes))) {
+		perror("setsockopt(SO_REUSEADDR) failed");
+		exit(EXIT_FAILURE);
+	}
 		
-		puts("Socket created");
+	puts("Socket created");
 
-		// TODO Her er det vi ønsker å legge til multithreading
-		while (1) {
+	// TODO Her er det vi ønsker å legge til multithreading
+	while (1) {
+
 		//Initializing the sockaddr_in structure
 		server.sin_family = AF_INET;
 		server.sin_port = htons(PORT);
 		server.sin_addr.s_addr = INADDR_ANY;
 
 		// Assinging an address to the socket using bind		
-		if(bind(socket_desc, (struct sockaddr *)&server, sizeof(server)) < 0) {
+		if(bind(server_socket, (struct sockaddr *)&server, sizeof(server)) < 0) {
 			perror("Bind failed. Error");
 			exit(EXIT_FAILURE);
 		}
@@ -136,67 +152,68 @@ int main(int argc , char *argv[]) {
 		puts("Bind successfull");
 		
 		// Prepares the socket for connection requests
-		listen(socket_desc, CONNECTION_QUEUE_LIMIT);
+		listen(server_socket, CONNECTION_QUEUE_LIMIT);
 		
 		puts("Waiting for incoming connections...");
 
 		// Denne burde vi virkelig kalle noe annet
 		c = sizeof(struct sockaddr_in);
 		
-		// This is the loop for creating a new connection
-		while (1) {
-
-		read(fileno(in_file), file_contents, sb.st_size );
-		printf(" %s",file_contents);
-
-		// While the file is not empty, write every line to the socket
-
-		write(client_socket, file_contents, strlen(file_contents));
-	
+		// Accept a connection from an incoming client. Does not proceeed from here before api-call.
+		client_socket = accept(server_socket, (struct sockaddr *)&client, (socklen_t*)&c);
 			
-			// Accept a connection from an incoming client. Does not proceeed from here before api-call.
-			client_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c);
-			
-			puts("New transmission started.");
+		puts("New transmission started.");
 
-			// Recieve an incoming request
-			char buf[512];
-    		int recc = recv(client_socket, buf, sizeof buf, 0);
-			
-			// TODO kommentert ut fordi det er en feil i pointers. Må fikses.
-			// Parsing and fixing the request to get desired file
-			// const char* file_path = request_string(buf, sizeof buf);
-			// puts(file_path);
+		// Recieve an incoming request
+		char buf[512];
+ 	
+    	int recc = recv(client_socket, buf, sizeof buf, 0);
+		char *s;
 
-			// const char* total_path = strcat(WWW_PATH,  file_path);
-			// const char* total_path_ext = strcat(total_path, ".html");
-
-			// puts(total_path_ext);
-			//Open the file to read from
-
-			// TODO START. denne lesingen av filer ønsker vi å gjøre i en egen funksjon
-			FILE *in_file = fopen(WWW_PATH, "r");
-
-			// Stat is a structure that is defined to store information about the file 
-			struct stat sb;
-			stat(WWW_PATH, &sb);
-
-			// Creates a read-only string with the same size of the file
-			char *file_contents = malloc(sb.st_size);
-			
-			// TODO denne måten å skrive data på lar oss ikke serve til en nettleser. Står spesifikt at vi må kunne gjøre det i oppgaven. Må returnere en HTTP/0.9 response.
-			// While the file is not empty, write every line to the socket
-			while (fgets(file_contents, sb.st_size, in_file)!=NULL) {
-				write(client_socket, file_contents, strlen(file_contents));
-			}
-			fclose(in_file);
-			// TODO END. Fra kommentar over (START) og ned hit skal bli en egen funksjon
-
-			close(client_socket);
-
-			puts("Transmission finished. Socket closed.");
-		}
+ 		s = strstr(buf, "index");      // search for string "hassasin" in buff
+ 		if (s != NULL)                     // if successful then s now points at "hassasin"
+		{
+     	printf("Found string at index = %ld\n", s - buf);
+ 		}                                  // index of "hassasin" in buff can be found by pointer subtraction
+ 		else{
+     	printf("String not found\n");  // `strstr` returns NULL if search string not found
 		}
 
-	// exit(EXIT_SUCCESS);
-}
+		// TODO kommentert ut fordi det er en feil i pointers. Må fikses.
+
+		// Parsing and fixing the request to get desired file
+	 	const char* file_path = request_string(buf, sizeof buf);
+			 
+		char* total_path = strcat(WWW_PATH,  file_path);
+		char* total_path_ext = strcat(total_path, ".html\n");
+			 
+		//Bare for å sjekke hva som printes
+		puts("\n");
+		printf("%s", buf);
+		puts("\n");
+		puts(file_path);
+		puts("\n");
+		puts(total_path);
+		puts("\n");
+		puts(total_path_ext);  
+			
+
+		//Open the file to read from
+		char * file_contents = read_from_file(WWW_PATH);
+
+		//Creates a buffer with the headers to be sent
+		char msg[BUFFER_SIZE];
+		snprintf(msg, sizeof(msg),
+		"HTTP/1.0 200 OK\n"
+		"Content-Type: text/html\n"
+		"Content-Lenght: %ld\n\n%s", strlen(file_contents), file_contents); 
+		write(client_socket, msg, strlen(msg));
+		}
+		
+		//Close the client socket
+		close(client_socket);
+
+		puts("Transmission finished. Socket closed.");
+		}
+
+
