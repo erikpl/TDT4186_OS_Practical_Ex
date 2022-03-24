@@ -79,6 +79,26 @@ int main(int argc , char * argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
+	int THREADS;
+	if (argv[3]) {
+		THREADS = atoi(argv[3]);
+		printf("Running the server with %d threads.\n", THREADS);
+	}
+	else {
+		fprintf(stderr, "Was not able to retrieve the desired number of threads.\nTry calling again using ./mtwwwd www_path port #threads #bufferslots\n");
+		exit(EXIT_FAILURE);
+	}
+
+	int BBUFFER_SLOTS;
+	if (argv[4]) {
+		BBUFFER_SLOTS = atoi(argv[4]);
+		printf("Running the connection with a queue size of %d.\n", BBUFFER_SLOTS);
+	}
+	else {
+		fprintf(stderr, "Was not able to retrieve the desired number of buffer slots.\nTry calling again using ./mtwwwd www_path port #threads #bufferslots\n");
+		exit(EXIT_FAILURE);
+	}
+
 	// Create the socket
 	server_socket = socket(AF_INET, SOCK_STREAM, 0);
 
