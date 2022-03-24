@@ -9,6 +9,7 @@
 #include <ctype.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include "bbuffer.h"
 
 #define BUFFER_SIZE 20000
 #define SIZE 1024
@@ -119,6 +120,15 @@ int main(int argc , char * argv[]) {
 	server.sin_family = AF_INET;
 	server.sin_port = htons(PORT);
 	server.sin_addr.s_addr = INADDR_ANY;
+
+	/* BBUFFER */
+	struct BNDBUF *request_bufer = bb_init(BBUFFER_SLOTS);
+
+	/* THREADS */
+	pthread_t workers[THREADS];
+	for (int i = 0; i < THREADS; i++) {
+		workers[i] = pthread_create(&workers[i], NULL, request_handler, request_bufer);
+	}
 
 	// TODO Her er det vi ønsker å legge til multithreading
 	while (1) {
