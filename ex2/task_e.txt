@@ -1,0 +1,13 @@
+We have found two ways you could ensure that the server will only serve files within the www_path directory:
+
+1. Resolve both www_path and full_path = strcat(www_path, req_path) to ensure that they are on the same 
+format (unnecessary forward slashes are removed, ".."s and "." have been resolved, and so on). Then, 
+you simply check if www_path is a prefix of full_path. If so, then the file must be within the 
+www_path directory.
+
+2. Run the server as User A, which has the permissions necessary to serve all directories (or at least 
+all of the directories we could be interested in serving). After receiving the www_path, give a second 
+user, B, which initially has no read permissions, permission to read the files in www_path. Then, when 
+checking if the file exists, which we do using "access(..., F_OK)", fork before the call, running the 
+"access(..., R_OK)" call as user B (and only as user B) by calling "setuid()" in the child process, 
+and checking for R_OK, or reading permissions, instead.
