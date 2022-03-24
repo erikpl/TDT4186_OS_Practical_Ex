@@ -216,12 +216,12 @@ int main(int argc , char * argv[]) {
 	server.sin_addr.s_addr = INADDR_ANY;
 
 	/* BBUFFER */
-	struct BNDBUF *request_bufer = bb_init(BBUFFER_SLOTS);
+	struct BNDBUF *request_buffer = bb_init(BBUFFER_SLOTS);
 
 	/* THREADS */
 	pthread_t workers[THREADS];
 	for (int i = 0; i < THREADS; i++) {
-		pthread_create(&workers[i], NULL, assign_request, request_bufer);
+		pthread_create(&workers[i], NULL, assign_request, request_buffer);
 	}
 
 	// TODO Her er det vi ønsker å legge til multithreading
