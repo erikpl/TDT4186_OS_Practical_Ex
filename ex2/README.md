@@ -3,10 +3,11 @@
 Guide to network programing:
 https://beej.us/guide/bgnet/html/#shutdownman
 
-Sending data with requests:
+Starting server from html directory:
+
+`./mtwwwd ./html 3350`
+
+Sending data with requests, getting index.html:
 
 GET
-`curl localhost:3350/data --http0.9`
-
-POST
-`curl localhost:3350 -d "index" --http0.9`
+`curl localhost:3350/index.html --http0.9`
