@@ -93,7 +93,6 @@ void assign_request(int client_socket, char *WWW_PATH) {
 				count++;
 			}
 		}
-
 		// ITerate through new line
 		token = strtok(NULL, "\n");
 	}
@@ -171,6 +170,7 @@ int main(int argc , char * argv[]) {
 		THREADS = atoi(argv[3]);
 		printf("Running the server with %d threads.\n", THREADS);
 	}
+
 	else {
 		fprintf(stderr, "Was not able to retrieve the desired number of threads.\nTry calling again using ./mtwwwd www_path port #threads #bufferslots\n");
 		exit(EXIT_FAILURE);
@@ -222,16 +222,16 @@ int main(int argc , char * argv[]) {
 		// Prepares the socket for connection requests
 		listen(server_socket, BBUFFER_SLOTS);
 		
+		printf("Running server with %d workers and %d buffer slots.\n\n",THREADS, BBUFFER_SLOTS );
 		
 		while (1) {
-
-		puts("Waiting for incoming connections...\n");
-		// Accept a connection from an incoming client. Does not proceeed from here before api-call.
-		client_socket = accept(server_socket, (struct sockaddr *)&client, (socklen_t*)&c);
-		
-		assign_request(client_socket, WWW_PATH);
-
-		
+			
+			puts("Waiting for incoming connections...\n");
+			
+			// Accept a connection from an incoming client. Does not proceeed from here before api-call.
+			client_socket = accept(server_socket, (struct sockaddr *)&client, (socklen_t*)&c);
+			
+			assign_request(client_socket, WWW_PATH);
 		}
 	}
 }
