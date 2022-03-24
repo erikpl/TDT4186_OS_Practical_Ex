@@ -241,6 +241,9 @@ int main(int argc , char * argv[]) {
 			// Accept a connection from an incoming client. Does not proceeed from here before api-call.
 			client_socket = accept(server_socket, (struct sockaddr *)&client, (socklen_t*)&c);
 			
+			// Pass client socket into ring buffer
+
+
 			assign_request(client_socket, WWW_PATH);
 		}
 	}
