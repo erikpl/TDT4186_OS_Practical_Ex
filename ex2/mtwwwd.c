@@ -251,6 +251,14 @@ int main(int argc , char * argv[]) {
 			
 			// Pass client socket into ring buffer
 			bb_add(request_buffer, client_socket);
+
+			// Checking if there are any threads that are free
+			for(int i = 0; i < THREADS; i++){
+				while (workers[i] != 0) {
+					pthread_create(&workers[i], NULL, assign_request, request_buffer);
+					pthread_join(workers[i], NULL);
+				}
+			}
 		}
 	// }
 }
