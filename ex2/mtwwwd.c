@@ -47,6 +47,94 @@ void slice_str(const char * str, char * buffer, size_t start, size_t end) {
     buffer[j] = 0;
 }
 
+void assign_request(int client_socket, char *WWW_PATH) {
+
+	puts("New transmission started.");
+
+	// Recieve an incoming request
+	char buf[1000];
+	int recc = recv(client_socket, buf, sizeof buf, 0);
+
+	// TODO Dette kan være en egen funksjon. Ikke prioritet nå.
+	// Define the token, comparison string and the desired path end. The path end is after the "GET" part of the request, which we are searching for.
+	char *token;
+	char *comp_str = "GET";
+	char *path_end = NULL;
+	char *correct_line;
+	char *tmp_token = NULL;
+	char *correct_line_elem = NULL;
+	int count = 0;
+
+	// Split the request by line
+	token = strtok(buf, "\n");
+	while( token != NULL ) {
+		
+		// Check if the beginning of the line is "GET"
+		char token_comp_str[strlen(comp_str)+1];
+		slice_str(token, token_comp_str, 0, 2);
+
+		// If "GET", search for the requests route.
+		if (strncmp(token_comp_str, comp_str, strlen(token_comp_str)) == 0) {
+			
+			// Get copy. Must be done to get the value of current line instead of entire request.
+			tmp_token = token;
+
+			// Iterate through every "word" of the "GET" line of the request
+			correct_line =  strtok(tmp_token, " ");
+			while(correct_line != NULL) {
+				
+				// The requested file is always the second word.
+				if(count == 1) {
+					
+					// Finally assign path end.
+					path_end = correct_line;
+				}
+				// Continue iteration.
+				correct_line = strtok(NULL, " ");
+				count++;
+			}
+		}
+
+		// ITerate through new line
+		token = strtok(NULL, "\n");
+	}
+	// TODO Dette kan være en egen funksjon. Ikke prioritet nå.
+
+	// Copy server path. 
+	char full_path[200];
+	strcpy(full_path, WWW_PATH);
+	
+	// Concat server and client path to get full path
+	strcat(full_path, path_end);
+
+
+	// Check if the file exists
+	if( access( full_path, F_OK ) == 0 ) {
+
+		// Print file served
+		printf("Serving html file: %s\n", full_path);			
+		//Open the file to read from
+		char * file_contents = read_from_file(full_path);
+
+		//Creates a buffer with the headers to be sent
+		char msg[BUFFER_SIZE];
+		snprintf(msg, sizeof(msg),
+		"HTTP/1.0 200 OK\n"
+		"Content-Type: text/html\n"
+		"Content-Lenght: %ld\n\n%s", strlen(file_contents), file_contents); 
+		write(client_socket, msg, strlen(msg));
+		
+	} else {
+		puts("File does not exists.");
+	}
+
+	//Close the client socket
+	close(client_socket);
+	// Reset the request
+	memset(buf, 0, sizeof(buf));
+	puts("Socket connection closed.\n");
+}
+
 
 // TODO: Legge til håndtering og bruk av command line arguments
 /* Called using ./mtwwwd www_path port #threads #bufferslots */
@@ -104,9 +192,6 @@ int main(int argc , char * argv[]) {
 	// TODO Her er det vi ønsker å legge til multithreading
 	while (1) {
 
-		// Create a new client socket, connect to server. 
-		client_socket = accept(server_socket, (struct sockaddr *)&client, (socklen_t*)&c);
-
 		// Assinging an address to the socket using bind		
 		if(bind(server_socket, (struct sockaddr *)&server, sizeof(server)) < 0) {
 			perror("Bind failed. Error");
@@ -118,99 +203,17 @@ int main(int argc , char * argv[]) {
 		// Prepares the socket for connection requests
 		listen(server_socket, CONNECTION_QUEUE_LIMIT);
 		
-		puts("Waiting for incoming connections...\n");
 		
 		while (1) {
 
+		puts("Waiting for incoming connections...\n");
 		// Accept a connection from an incoming client. Does not proceeed from here before api-call.
 		client_socket = accept(server_socket, (struct sockaddr *)&client, (socklen_t*)&c);
-			
-		puts("New transmission started.");
-
-		// Recieve an incoming request
-		char buf[1000];
-    	int recc = recv(client_socket, buf, sizeof buf, 0);
-
-		// TODO Dette kan være en egen funksjon. Ikke prioritet nå.
-		// Define the token, comparison string and the desired path end. The path end is after the "GET" part of the request, which we are searching for.
-		char *token;
-		char *comp_str = "GET";
-		char *path_end = NULL;
-		char *correct_line;
-		char *tmp_token = NULL;
-		char *correct_line_elem = NULL;
-		int count = 0;
-
-		// Split the request by line
-		token = strtok(buf, "\n");
-		while( token != NULL ) {
-			
-			// Check if the beginning of the line is "GET"
-			char token_comp_str[strlen(comp_str)+1];
-			slice_str(token, token_comp_str, 0, 2);
-
-			// If "GET", search for the requests route.
-			if (strncmp(token_comp_str, comp_str, strlen(token_comp_str)) == 0) {
-				
-				// Get copy. Must be done to get the value of current line instead of entire request.
-				tmp_token = token;
-
-				// Iterate through every "word" of the "GET" line of the request
-				correct_line =  strtok(tmp_token, " ");
-				while(correct_line != NULL) {
-					
-					// The requested file is always the second word.
-					if(count == 1) {
-						
-						// Finally assign path end.
-						path_end = correct_line;
-					}
-					// Continue iteration.
-					correct_line = strtok(NULL, " ");
-					count++;
-				}
-			}
-
-			// ITerate through new line
-			token = strtok(NULL, "\n");
-		}
-		// TODO Dette kan være en egen funksjon. Ikke prioritet nå.
-
-		// Copy server path. 
-		char full_path[200];
-		strcpy(full_path, WWW_PATH);
 		
-		// Concat server and client path to get full path
-		strcat(full_path, path_end);
+		assign_request(client_socket, WWW_PATH);
 
-
-		// Check if the file exists
-		if( access( full_path, F_OK ) == 0 ) {
-
-			// Print file served
-			printf("Serving html file: %s\n", full_path);			
-			//Open the file to read from
-			char * file_contents = read_from_file(full_path);
-
-			//Creates a buffer with the headers to be sent
-			char msg[BUFFER_SIZE];
-			snprintf(msg, sizeof(msg),
-			"HTTP/1.0 200 OK\n"
-			"Content-Type: text/html\n"
-			"Content-Lenght: %ld\n\n%s", strlen(file_contents), file_contents); 
-			write(client_socket, msg, strlen(msg));
-			
-		} else {
-			puts("File does not exists.");
-		}
-
-		//Close the client socket
-		close(client_socket);
-		// Reset the request
-		memset(buf, 0, sizeof(buf));
-		puts("Socket connection closed.\n");
+		
 		}
 	}
 }
-
 
