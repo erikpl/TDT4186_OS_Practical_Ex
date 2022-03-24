@@ -54,14 +54,15 @@ void slice_str(const char * str, char * buffer, size_t start, size_t end) {
     buffer[j] = 0;
 }
 
-void* assign_request(void *data) {
+void* assign_request(void *request_buffer) {
 
-	// TODO: hente socket_fd fra buffer her
-
-	int *client_socket_ptr = data;
-	int client_socket = *client_socket_ptr;
-
+	puts("before reqq");
+	// Getting the cient socket from the buffer
+	int client_socket = bb_get(request_buffer);
+	puts("After reqq");
 	puts("New transmission started.");
+	puts("socket below");
+	printf("client socket in work thread: %d", client_socket);
 
 	// Recieve an incoming request
 	char buf[1000];
@@ -79,6 +80,7 @@ void* assign_request(void *data) {
 
 	// Split the request by line
 	token = strtok(buf, "\n");
+
 	while( token != NULL ) {
 		
 		// Check if the beginning of the line is "GET"
@@ -144,6 +146,7 @@ void* assign_request(void *data) {
 	// Reset the request
 	memset(buf, 0, sizeof(buf));
 	puts("Socket connection closed.\n");
+	return 0;
 }
 
 
@@ -216,50 +219,70 @@ int main(int argc , char * argv[]) {
 	server.sin_family = AF_INET;
 	server.sin_port = htons(PORT);
 	server.sin_addr.s_addr = INADDR_ANY;
-
+	
 	/* BBUFFER */
 	request_buffer = bb_init(BBUFFER_SLOTS);
 
 	/* THREADS */
 	pthread_t workers[THREADS];
-	for (int i = 0; i < THREADS; i++) {
-		pthread_create(&workers[i], NULL, assign_request, request_buffer);
-	}
+	// for (int i = 0; i < THREADS; i++) {
+	// 	puts("test");
+	// 	pthread_create(&workers[i], NULL, assign_request, request_buffer);
+	// }
 
 	// TODO Her er det vi ønsker å legge til multithreading
 	// while (1) {
 
-		// Assinging an address to the socket using bind		
-		if(bind(server_socket, (struct sockaddr *)&server, sizeof(server)) < 0) {
-			perror("Bind failed. Error");
-			exit(EXIT_FAILURE);
-		}
+	// Assinging an address to the socket using bind		
+	if(bind(server_socket, (struct sockaddr *)&server, sizeof(server)) < 0) {
+		perror("Bind failed. Error");
+		exit(EXIT_FAILURE);
+	}
 
-		puts("Bind successfull");
+	puts("Bind succesfull");
+	
+	// Prepares the socket for connection requests
+	listen(server_socket, BBUFFER_SLOTS);
+	
+	printf("Running server with %d workers and %d buffer slots.\n\n",THREADS, BBUFFER_SLOTS );
 		
-		// Prepares the socket for connection requests
-		listen(server_socket, BBUFFER_SLOTS);
+	while (1) {
 		
-		printf("Running server with %d workers and %d buffer slots.\n\n",THREADS, BBUFFER_SLOTS );
+		puts("Waiting for incoming connections...\n");
 		
-		while (1) {
-			
-			puts("Waiting for incoming connections...\n");
-			
-			// Accept a connection from an incoming client. Does not proceeed from here before api-call.
-			client_socket = accept(server_socket, (struct sockaddr *)&client, (socklen_t*)&c);
-			
-			// Pass client socket into ring buffer
-			bb_add(request_buffer, client_socket);
+		// Accept a connection from an incoming client. Does not proceeed from here before api-call.
+		client_socket = accept(server_socket, (struct sockaddr *)&client, (socklen_t*)&c);
+		
+		printf("client socket: %d\n", client_socket);
 
-			// Checking if there are any threads that are free
-			for(int i = 0; i < THREADS; i++){
-				while (workers[i] != 0) {
-					pthread_create(&workers[i], NULL, assign_request, request_buffer);
-					pthread_join(workers[i], NULL);
-				}
+		// Pass client socket into ring buffer
+		bb_add(request_buffer, client_socket);
+
+		// Checking if there are any threads that are free
+		for(int i = 0; i < THREADS; i++){
+			while (workers[i] != 0) {
+
+				puts("start test");
+				// printf("request buffer %d",bb_get(request_buffer) );
+				pthread_create(&workers[i], NULL, assign_request, request_buffer);
+
+				// Accept a connection from an incoming client. Does not proceeed from here before api-call.
+				client_socket = accept(server_socket, (struct sockaddr *)&client, (socklen_t*)&c);
+				
+				printf("client socket: %d\n", client_socket);
+
+				// Pass client socket into ring buffer
+				bb_add(request_buffer, client_socket);
+
+
+
+				puts("slutt test");
+				// pthread_join(workers[i], NULL);
+				puts("Ferdig med tråd.");
+
 			}
 		}
+	}
 	// }
 }
 
