@@ -147,6 +147,7 @@ void V(SEM *sem) {
     pthread_mutex_lock(&(sem -> mutex));
 
     // Only signal if incrementing from 0
+    // Not sure if this is necessary, but better safe than sorry
     if (sem -> counter == 0) {
         /* Unblock a waiting thread calling pthread_cond_wait.
         * The return variable is ignored.
