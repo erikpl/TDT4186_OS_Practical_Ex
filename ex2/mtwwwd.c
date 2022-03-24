@@ -20,7 +20,7 @@ int PORT;
 int BBUFFER_SLOTS;
 int THREADS;
 
-
+struct BNDBUF *request_buffer;
 
 // Function that reads from a file and returns a string with the file contents
 char * read_from_file(char *filename) {
@@ -55,6 +55,8 @@ void slice_str(const char * str, char * buffer, size_t start, size_t end) {
 }
 
 void* assign_request(void *data) {
+
+	// TODO: hente socket_fd fra buffer her
 
 	int *client_socket_ptr = data;
 	int client_socket = *client_socket_ptr;
@@ -216,7 +218,7 @@ int main(int argc , char * argv[]) {
 	server.sin_addr.s_addr = INADDR_ANY;
 
 	/* BBUFFER */
-	struct BNDBUF *request_buffer = bb_init(BBUFFER_SLOTS);
+	request_buffer = bb_init(BBUFFER_SLOTS);
 
 	/* THREADS */
 	pthread_t workers[THREADS];
@@ -248,8 +250,7 @@ int main(int argc , char * argv[]) {
 			client_socket = accept(server_socket, (struct sockaddr *)&client, (socklen_t*)&c);
 			
 			// Pass client socket into ring buffer
-
-			assign_request((void*) &client_socket);
+			bb_add(request_buffer, client_socket);
 		}
 	// }
 }
