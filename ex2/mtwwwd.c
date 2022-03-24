@@ -10,9 +10,16 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include "bbuffer.h"
+#include <pthread.h>
 
 #define BUFFER_SIZE 20000
 #define SIZE 1024
+
+char *WWW_PATH;
+int PORT;
+int BBUFFER_SLOTS;
+int THREADS;
+
 
 
 // Function that reads from a file and returns a string with the file contents
@@ -47,7 +54,10 @@ void slice_str(const char * str, char * buffer, size_t start, size_t end) {
     buffer[j] = 0;
 }
 
-void assign_request(int client_socket, char *WWW_PATH) {
+void assign_request(void *data) {
+
+	int *client_socket_ptr = data;
+	int client_socket = *client_socket_ptr;
 
 	puts("New transmission started.");
 
@@ -138,7 +148,6 @@ void assign_request(int client_socket, char *WWW_PATH) {
 // TODO: Legge til håndtering og bruk av command line arguments
 /* Called using ./mtwwwd www_path port #threads #bufferslots */
 int main(int argc , char * argv[]) {
-	char *WWW_PATH;
 	int server_socket, client_socket, c, read_size, n;
 	struct sockaddr_in server , client;
 	char client_message[BUFFER_SIZE];
@@ -156,7 +165,6 @@ int main(int argc , char * argv[]) {
 	}
 
 	// Handling PORT from the command_line. 
-	int PORT;
 	if (argv[2]) {
 		PORT = atoi(argv[2]);
 		printf("Accepting connection on port number %d\n", PORT);
@@ -166,7 +174,6 @@ int main(int argc , char * argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
-	int THREADS;
 	if (argv[3]) {
 		THREADS = atoi(argv[3]);
 		printf("Running the server with %d threads.\n", THREADS);
@@ -177,7 +184,6 @@ int main(int argc , char * argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
-	int BBUFFER_SLOTS;
 	if (argv[4]) {
 		BBUFFER_SLOTS = atoi(argv[4]);
 		printf("Running the connection with a queue size of %d.\n", BBUFFER_SLOTS);
@@ -215,11 +221,11 @@ int main(int argc , char * argv[]) {
 	/* THREADS */
 	pthread_t workers[THREADS];
 	for (int i = 0; i < THREADS; i++) {
-		workers[i] = pthread_create(&workers[i], NULL, request_handler, request_bufer);
+		workers[i] = pthread_create(&workers[i], NULL, assign_request, request_bufer);
 	}
 
 	// TODO Her er det vi ønsker å legge til multithreading
-	while (1) {
+	// while (1) {
 
 		// Assinging an address to the socket using bind		
 		if(bind(server_socket, (struct sockaddr *)&server, sizeof(server)) < 0) {
@@ -243,9 +249,8 @@ int main(int argc , char * argv[]) {
 			
 			// Pass client socket into ring buffer
 
-
-			assign_request(client_socket, WWW_PATH);
+			assign_request(&client_socket);
 		}
-	}
+	// }
 }
 
