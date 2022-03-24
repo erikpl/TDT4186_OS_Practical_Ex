@@ -54,7 +54,7 @@ void slice_str(const char * str, char * buffer, size_t start, size_t end) {
     buffer[j] = 0;
 }
 
-void assign_request(void *data) {
+void* assign_request(void *data) {
 
 	int *client_socket_ptr = data;
 	int client_socket = *client_socket_ptr;
@@ -221,7 +221,7 @@ int main(int argc , char * argv[]) {
 	/* THREADS */
 	pthread_t workers[THREADS];
 	for (int i = 0; i < THREADS; i++) {
-		workers[i] = pthread_create(&workers[i], NULL, assign_request, request_bufer);
+		pthread_create(&workers[i], NULL, assign_request, request_bufer);
 	}
 
 	// TODO Her er det vi ønsker å legge til multithreading
@@ -249,7 +249,7 @@ int main(int argc , char * argv[]) {
 			
 			// Pass client socket into ring buffer
 
-			assign_request(&client_socket);
+			assign_request((void*) &client_socket);
 		}
 	// }
 }
