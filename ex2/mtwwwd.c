@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <ctype.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 #define BUFFER_SIZE 20000
 #define SIZE 1024
@@ -37,52 +38,15 @@ char * read_from_file(char *filename) {
 	
 }
 
-
-// Function to parse and return the data from a request
-const char* request_string(char *buf, int size) {
-	int read_start = 0;
-	int read_stop = 0;
-	int data_index = 0;
-	char data[512];
-	int i = size;
-
-	// Loop through request
-	for (i; i > -1 ; i--) {
-		
-		// When first finding a char, start writing
-		if (isalpha(buf[i])) {
-			read_start = 1;
-		}
-		
-		// TODO endre denne til å sjekke for "/" i stedet for 0. Da kan vi lese et filnavn. Bytte denne kodeblokken med // write to char array så blir det riktig
-		// Stop reading when finding a space
-		if (isalpha(buf[i]) == 0 && read_start == 1) {
-			printf("i %d read start%d, char %d ", i, read_start, isalpha(buf[i]));
-			read_stop = 1;
-		}
-		
-		// write to char array
-		if ((read_start == 1) && (read_stop == 0)) {
-			data[data_index] = buf[i];
-			data_index++;
-		}
-
-		// stop reading
-		if ((read_start == 1) && (read_stop == 1)) {
-			break;
-		}
-	}
-
-	// Reverse string
-	char string_done[500];
-	for(i=0; i < strlen(data); ++i) {
-			string_done[strlen(data) -i-1] = data[i];
-		}
-	
-	// Letting our string be returned
-	const char * res = string_done;
-	return res;
+// Slice string and assign to buffer. From start to end.
+void slice_str(const char * str, char * buffer, size_t start, size_t end) {
+    size_t j = 0;
+    for ( size_t i = start; i <= end; ++i ) {
+        buffer[j++] = str[i];
+    }
+    buffer[j] = 0;
 }
+
 
 // TODO: Legge til håndtering og bruk av command line arguments
 /* Called using ./mtwwwd www_path port #threads #bufferslots */
@@ -93,8 +57,6 @@ int main(int argc , char * argv[]) {
 	char client_message[BUFFER_SIZE];
 	long numbytes;
 	char source[600];
-
-	// TODO test the path
 
 	// Handling WWW_PATH from the command line 
 	if (argv[1]) {
@@ -134,14 +96,16 @@ int main(int argc , char * argv[]) {
 	}
 		
 	puts("Socket created");
+	//Initializing the sockaddr_in structure
+	server.sin_family = AF_INET;
+	server.sin_port = htons(PORT);
+	server.sin_addr.s_addr = INADDR_ANY;
 
 	// TODO Her er det vi ønsker å legge til multithreading
 	while (1) {
 
-		//Initializing the sockaddr_in structure
-		server.sin_family = AF_INET;
-		server.sin_port = htons(PORT);
-		server.sin_addr.s_addr = INADDR_ANY;
+		// Create a new client socket, connect to server. 
+		client_socket = accept(server_socket, (struct sockaddr *)&client, (socklen_t*)&c);
 
 		// Assinging an address to the socket using bind		
 		if(bind(server_socket, (struct sockaddr *)&server, sizeof(server)) < 0) {
@@ -154,66 +118,99 @@ int main(int argc , char * argv[]) {
 		// Prepares the socket for connection requests
 		listen(server_socket, CONNECTION_QUEUE_LIMIT);
 		
-		puts("Waiting for incoming connections...");
-
-		// Denne burde vi virkelig kalle noe annet
-		c = sizeof(struct sockaddr_in);
+		puts("Waiting for incoming connections...\n");
 		
+		while (1) {
+
 		// Accept a connection from an incoming client. Does not proceeed from here before api-call.
 		client_socket = accept(server_socket, (struct sockaddr *)&client, (socklen_t*)&c);
 			
 		puts("New transmission started.");
 
 		// Recieve an incoming request
-		char buf[512];
- 	
+		char buf[1000];
     	int recc = recv(client_socket, buf, sizeof buf, 0);
-		char *s;
 
- 		s = strstr(buf, "index");      // search for string "hassasin" in buff
- 		if (s != NULL)                     // if successful then s now points at "hassasin"
-		{
-     	printf("Found string at index = %ld\n", s - buf);
- 		}                                  // index of "hassasin" in buff can be found by pointer subtraction
- 		else{
-     	printf("String not found\n");  // `strstr` returns NULL if search string not found
-		}
+		// TODO Dette kan være en egen funksjon. Ikke prioritet nå.
+		// Define the token, comparison string and the desired path end. The path end is after the "GET" part of the request, which we are searching for.
+		char *token;
+		char *comp_str = "GET";
+		char *path_end = NULL;
+		char *correct_line;
+		char *tmp_token = NULL;
+		char *correct_line_elem = NULL;
+		int count = 0;
 
-		// TODO kommentert ut fordi det er en feil i pointers. Må fikses.
-
-		// Parsing and fixing the request to get desired file
-	 	const char* file_path = request_string(buf, sizeof buf);
-			 
-		char* total_path = strcat(WWW_PATH,  file_path);
-		char* total_path_ext = strcat(total_path, ".html\n");
-			 
-		//Bare for å sjekke hva som printes
-		puts("\n");
-		printf("%s", buf);
-		puts("\n");
-		puts(file_path);
-		puts("\n");
-		puts(total_path);
-		puts("\n");
-		puts(total_path_ext);  
+		// Split the request by line
+		token = strtok(buf, "\n");
+		while( token != NULL ) {
 			
+			// Check if the beginning of the line is "GET"
+			char token_comp_str[strlen(comp_str)+1];
+			slice_str(token, token_comp_str, 0, 2);
 
-		//Open the file to read from
-		char * file_contents = read_from_file(WWW_PATH);
+			// If "GET", search for the requests route.
+			if (strncmp(token_comp_str, comp_str, strlen(token_comp_str)) == 0) {
+				
+				// Get copy. Must be done to get the value of current line instead of entire request.
+				tmp_token = token;
 
-		//Creates a buffer with the headers to be sent
-		char msg[BUFFER_SIZE];
-		snprintf(msg, sizeof(msg),
-		"HTTP/1.0 200 OK\n"
-		"Content-Type: text/html\n"
-		"Content-Lenght: %ld\n\n%s", strlen(file_contents), file_contents); 
-		write(client_socket, msg, strlen(msg));
+				// Iterate through every "word" of the "GET" line of the request
+				correct_line =  strtok(tmp_token, " ");
+				while(correct_line != NULL) {
+					
+					// The requested file is always the second word.
+					if(count == 1) {
+						
+						// Finally assign path end.
+						path_end = correct_line;
+					}
+					// Continue iteration.
+					correct_line = strtok(NULL, " ");
+					count++;
+				}
+			}
+
+			// ITerate through new line
+			token = strtok(NULL, "\n");
 		}
+		// TODO Dette kan være en egen funksjon. Ikke prioritet nå.
+
+		// Copy server path. 
+		char full_path[200];
+		strcpy(full_path, WWW_PATH);
 		
+		// Concat server and client path to get full path
+		strcat(full_path, path_end);
+
+
+		// Check if the file exists
+		if( access( full_path, F_OK ) == 0 ) {
+
+			// Print file served
+			printf("Serving html file: %s\n", full_path);			
+			//Open the file to read from
+			char * file_contents = read_from_file(full_path);
+
+			//Creates a buffer with the headers to be sent
+			char msg[BUFFER_SIZE];
+			snprintf(msg, sizeof(msg),
+			"HTTP/1.0 200 OK\n"
+			"Content-Type: text/html\n"
+			"Content-Lenght: %ld\n\n%s", strlen(file_contents), file_contents); 
+			write(client_socket, msg, strlen(msg));
+			
+		} else {
+			puts("File does not exists.");
+		}
+
 		//Close the client socket
 		close(client_socket);
-
-		puts("Transmission finished. Socket closed.");
+		// Reset the request
+		memset(buf, 0, sizeof(buf));
+		puts("Socket connection closed.\n");
 		}
+	}
+}
 
 
