@@ -42,7 +42,6 @@ char * read_from_file(char *filename) {
 	return file_contents;
 
 	close(in_file);
-	
 }
 
 // Slice string and assign to buffer. From start to end.
@@ -56,19 +55,13 @@ void slice_str(const char * str, char * buffer, size_t start, size_t end) {
 
 void* assign_request(void *request_buffer) {
 
-	puts("before reqq");
 	// Getting the cient socket from the buffer
 	int client_socket = bb_get(request_buffer);
-	puts("After reqq");
-	puts("New transmission started.");
-	puts("socket below");
-	printf("client socket in work thread: %d", client_socket);
 
 	// Recieve an incoming request
 	char buf[1000];
 	int recc = recv(client_socket, buf, sizeof buf, 0);
 
-	// TODO Dette kan være en egen funksjon. Ikke prioritet nå.
 	// Define the token, comparison string and the desired path end. The path end is after the "GET" part of the request, which we are searching for.
 	char *token;
 	char *comp_str = "GET";
@@ -81,6 +74,7 @@ void* assign_request(void *request_buffer) {
 	// Split the request by line
 	token = strtok(buf, "\n");
 
+	// Iterating over request
 	while( token != NULL ) {
 		
 		// Check if the beginning of the line is "GET"
@@ -111,7 +105,6 @@ void* assign_request(void *request_buffer) {
 		// ITerate through new line
 		token = strtok(NULL, "\n");
 	}
-	// TODO Dette kan være en egen funksjon. Ikke prioritet nå.
 
 	// Copy server path. 
 	char full_path[200];
@@ -119,7 +112,6 @@ void* assign_request(void *request_buffer) {
 	
 	// Concat server and client path to get full path
 	strcat(full_path, path_end);
-
 
 	// Check if the file exists
 	if( access( full_path, F_OK ) == 0 ) {
@@ -149,8 +141,6 @@ void* assign_request(void *request_buffer) {
 	return 0;
 }
 
-
-// TODO: Legge til håndtering og bruk av command line arguments
 /* Called using ./mtwwwd www_path port #threads #bufferslots */
 int main(int argc , char * argv[]) {
 	int server_socket, client_socket, c, read_size, n;
@@ -179,6 +169,7 @@ int main(int argc , char * argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
+	// Handling THREADS from the command_line. 
 	if (argv[3]) {
 		THREADS = atoi(argv[3]);
 		printf("Running the server with %d threads.\n", THREADS);
@@ -189,6 +180,7 @@ int main(int argc , char * argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
+	// Handling BBUFFER_SLOTS from the command_line. 
 	if (argv[4]) {
 		BBUFFER_SLOTS = atoi(argv[4]);
 		printf("Running the connection with a queue size of %d.\n", BBUFFER_SLOTS);
@@ -215,6 +207,7 @@ int main(int argc , char * argv[]) {
 	}
 		
 	puts("Socket created");
+
 	//Initializing the sockaddr_in structure
 	server.sin_family = AF_INET;
 	server.sin_port = htons(PORT);
@@ -225,13 +218,6 @@ int main(int argc , char * argv[]) {
 
 	/* THREADS */
 	pthread_t workers[THREADS];
-	// for (int i = 0; i < THREADS; i++) {
-	// 	puts("test");
-	// 	pthread_create(&workers[i], NULL, assign_request, request_buffer);
-	// }
-
-	// TODO Her er det vi ønsker å legge til multithreading
-	// while (1) {
 
 	// Assinging an address to the socket using bind		
 	if(bind(server_socket, (struct sockaddr *)&server, sizeof(server)) < 0) {
@@ -239,13 +225,13 @@ int main(int argc , char * argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
-	puts("Bind succesfull");
+	puts("Bind succesfull.");
 	
 	// Prepares the socket for connection requests
 	listen(server_socket, BBUFFER_SLOTS);
 	
 	printf("Running server with %d workers and %d buffer slots.\n\n",THREADS, BBUFFER_SLOTS );
-		
+	
 	while (1) {
 		
 		puts("Waiting for incoming connections...\n");
@@ -253,8 +239,6 @@ int main(int argc , char * argv[]) {
 		// Accept a connection from an incoming client. Does not proceeed from here before api-call.
 		client_socket = accept(server_socket, (struct sockaddr *)&client, (socklen_t*)&c);
 		
-		printf("client socket: %d\n", client_socket);
-
 		// Pass client socket into ring buffer
 		bb_add(request_buffer, client_socket);
 
@@ -262,27 +246,15 @@ int main(int argc , char * argv[]) {
 		for(int i = 0; i < THREADS; i++){
 			while (workers[i] != 0) {
 
-				puts("start test");
-				// printf("request buffer %d",bb_get(request_buffer) );
+				// Create worker thread and starting to serve request
 				pthread_create(&workers[i], NULL, assign_request, request_buffer);
 
-				// Accept a connection from an incoming client. Does not proceeed from here before api-call.
+				// Accept a connection from an incoming client. Does not proceeed from here before an api-call.
 				client_socket = accept(server_socket, (struct sockaddr *)&client, (socklen_t*)&c);
 				
-				printf("client socket: %d\n", client_socket);
-
 				// Pass client socket into ring buffer
 				bb_add(request_buffer, client_socket);
-
-
-
-				puts("slutt test");
-				// pthread_join(workers[i], NULL);
-				puts("Ferdig med tråd.");
-
 			}
 		}
 	}
-	// }
 }
-
