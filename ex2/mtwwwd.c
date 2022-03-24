@@ -12,7 +12,6 @@
 
 #define BUFFER_SIZE 20000
 #define SIZE 1024
-#define CONNECTION_QUEUE_LIMIT 5
 
 
 // Function that reads from a file and returns a string with the file contents
@@ -136,7 +135,7 @@ int main(int argc , char * argv[]) {
 		puts("Bind successfull");
 		
 		// Prepares the socket for connection requests
-		listen(server_socket, CONNECTION_QUEUE_LIMIT);
+		listen(server_socket, BBUFFER_SLOTS);
 		
 		puts("Waiting for incoming connections...\n");
 		
