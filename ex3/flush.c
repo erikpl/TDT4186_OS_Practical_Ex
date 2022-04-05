@@ -8,6 +8,17 @@
 
 #define BUFFER_LENGTH 700 
 
+pid_t p;                       // Brukes til fork senere
+int status;                    // Brukes til fork senere
+
+char input[BUFFER_LENGTH];     // Input fra brukeren
+char *word;                    // De individuelle stringene bra bruker
+char *cmnd;                    // Første stringen i input fra bruker, altså kommandoen
+char *args[BUFFER_LENGTH];     // Alt som kommer etter første string i input fra bruker
+char *cd = "cd";
+int x = 0;
+int keep_running = 1;
+
 // Returns the current working directory
 char * getCurrentDirectory() {
 char buf[BUFFER_LENGTH] = "";
@@ -16,14 +27,8 @@ path = getcwd(buf, FILENAME_MAX);
 return path;
 }
 
-int main(int argc, char const *argv[])
-{
-    char input[BUFFER_LENGTH]; 
-    char *word;
-    char *cmnd;
-    pid_t p;
-    int status;
-    char *cd = "cd";
+// Henter ut brukerinput og lagrer det i cmnd og args
+void getUserInput(){
 
     // Prompts the user with the current working directory plus ": "
     printf("%s: \n", getCurrentDirectory());
@@ -42,18 +47,47 @@ int main(int argc, char const *argv[])
 
     // Keep getting words from input
     while (word != NULL) {
-   
-        //TODO: Få lagt til resten av ordene fra input i en liste eller lignende somehow
         word = strtok(NULL, split_on);
-        printf("%s \n", word);
-    
+        args[x] = word;
+        x++;
     }
+    
+    // Bare en test for å sjekke om args har alle strengene, siste element er x-2 
+    printf("The last string of the input is: %s \n",args[x-2]);
+}
+
+
+int main(int argc, char const *argv[]) {
+
+while(keep_running) {
+
+    getUserInput();
+
+
+
+/*     printf("Cmnd: %s \n", cmnd);
+    printf("First arg and second arg: %s, %s \n", args[0], args[1]);
+
 
     // Checks if the command is cd and if so, changes current directory. Arguments from input will be used instead of ".." later.
-    if (strcmp(cmnd, cd) == 0){
-        chdir("..");
-        printf("%s: \n", getCurrentDirectory());
-    }
+    while (strcmp(cmnd, cd) == 0){
+        if(args[1] != NULL){
+            printf("Too many arguments. \n");
+            break;
+        }
+    
+        if(args[1] == NULL) {
+            printf("%s \n", args[0]);
+            chdir("..");
+            break; 
+        }    
+    } */
+
+
+}
+  
+
+  
 
     
 
