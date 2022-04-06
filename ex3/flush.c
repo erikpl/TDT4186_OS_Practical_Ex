@@ -16,17 +16,15 @@ char cwd[BUFFER_LENGTH];
 char *arguments[BUFFER_LENGTH];
 
 // Returnerer current working directory
-char * get_current_directory()
-{
+char * get_current_directory(){
     getcwd(cwd, sizeof(cwd));
     return cwd;
 }
 
 // Håndterer brukerinput og legger kommandoen (første string) til i cmnd, og argumentene i arguments
-void handle_user_input(char input[BUFFER_LENGTH])
-{
+void handle_user_input(char input[BUFFER_LENGTH]) {
     // Splitter på mellomrom og tab
-    char split_on[3] = {' ', '\t'};
+    char split_on[3] = {' ', '\t', '\0'};
 
     char *word = strtok(input, split_on);
 
@@ -34,92 +32,77 @@ void handle_user_input(char input[BUFFER_LENGTH])
     cmnd = word;
 
     // Lagrer argumentene i arguments
-    while (word != NULL)
-    {
+    while (word != NULL) {
         word = strtok(NULL, split_on);
         arguments[x] = word;
         x++;
     }
 
+    
     // Sjekker om kommandoen er cd
-    if(strcmp(cmnd, "cd") == 0)
-    {
-        printf("Cmnd = %s\n", cmnd);
-        printf("Arguments = %s", arguments[0]);
-        if(arguments[0] == NULL)
-        {
+    if(strcmp(cmnd, "cd") == 0) {
+        printf("Arguments = %s\n", arguments[0]);
+        if(arguments[0] == NULL) {
             printf("The path is empty.\n");
         }
-        
-        // Dette vil for en eller annen grunn ikke fungere.. Om man bytter arguments[1] med ".." så funker det ¯\_(ツ)_/¯
-        chdir(arguments[1]);
-    }
-    
+
+        chdir(arguments[0]);
+    }  
 }
 
-void execute_commands()
-{
+void execute_commands() {
     pid_t p = fork();
 
-    if (p == -1) 
-    {
+    if (p == -1) {
         printf("There was an error when trying to fork.\n");
         return;
 
     }
 
-    else if (p > 0) 
-    {
-
-        if(waitpid(p, &status, 0) == -1)
-        {
+    else if (p > 0) {
+        if(waitpid(p, &status, 0) == -1) {
             printf("Error: Failed calling waitpid.\n");
             exit(EXIT_FAILURE);
         }
         
-        if(WIFEXITED(status))
-        {
-            int exit_status = WEXITSTATUS(status);
-
-            // TODO Skal fikse det her slik at den printer hele kommandolinjen senere, printer nå bare kommandoen
-            printf("Exit status [%s] = %d\n", cmnd, exit_status);
+        if(WIFEXITED(status)) {
+            int exit_status;
+            exit_status = WEXITSTATUS(status);
+     
+            printf("Exit status [%s %s] = %d\n", cmnd, arguments[0], exit_status);
         }
     }
 
-    else if (p == 0)
-    {
-        // Bare for å sjekke hva cmnd og siste argument er 
-        printf("Command is: %s \n", cmnd);
-        printf("The last argument is: %s \n", arguments[x-2]);
+    else if (p == 0) {
 
-        // Igjen så fungerer f.eks: ls -all eller om man bytter cmnd med "./run" 
-        // men om man prøver å kjøre en fil f.eks ./run så fungerer ikke det ¯\_(ツ)_/¯
         execvp(cmnd, arguments);
-        
         printf("There was an error: %s\n", strerror(errno));
         exit(0);
     }
 
-    else 
-    {
+    else {
         wait(NULL);
         return;
     }
 }
 
-int main() 
-{
+int main() {
     int keep_running = 1;
     char user_input[BUFFER_LENGTH];
 
-    while (keep_running)
-    {
+    while (keep_running) {
         printf("%s: ", get_current_directory());
         fgets(user_input, BUFFER_LENGTH, stdin);
+        fflush(stdin);
+        printf("\n");
+
+        // Fjerner mellomrommet på slutten av user_input
+        user_input[strlen(user_input) - 1] = '\0';
 
         handle_user_input(user_input);
 
-        if (strcmp(cmnd, "cd") != 0) 
+        if (strcmp(cmnd, "cd") != 0) {
             execute_commands();
+        }
     }
 }
