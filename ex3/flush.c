@@ -17,7 +17,7 @@ char *arguments[BUFFER_LENGTH];
 int arg_idx = 0;
 
 // Built in command variables
-char * built_in_cmd [] = { "cd", "jobs", "cat"};
+char * built_in_cmd [] = {"cd", "jobs"};
 int built_in_cmd_len = sizeof(built_in_cmd)/sizeof(built_in_cmd[0]);
 
 
