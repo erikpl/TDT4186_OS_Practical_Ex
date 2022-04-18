@@ -84,7 +84,6 @@ void get_io_type(int *output_index, int *input_index) {
     int loop_counter = 0;
     while (arguments[loop_counter] != 0) {
         printf("Argument nr. %d: %s\n", loop_counter, arguments[loop_counter]);
-        printf("strcmp(echo, >): %d\n", strcmp("echo", ">"));
         if (strcmp(arguments[loop_counter], ">") == 0) {
             printf("Found output\n");
             if (output_redir_pos != -1) {
@@ -134,7 +133,7 @@ void get_io_type(int *output_index, int *input_index) {
 }
 
 void execute_bin() {
-
+    printf("Executes bin\n");
     // Get PIDs
     pid_t parent_pid = getpid();
     pid_t child_pid = fork();
@@ -164,7 +163,7 @@ void execute_bin() {
         int input_redir_pos;
         int output_redir_pos;
         // Sets redirect indices. -1 for no redirect, -2 for invalid redirect.
-        get_io_type(&input_redir_pos, &output_redir_pos);
+        get_io_type(&output_redir_pos, &input_redir_pos);
 
         // Check if the command has invalid redirections
         if (input_redir_pos == -2 || output_redir_pos == -2) {
@@ -174,6 +173,7 @@ void execute_bin() {
 
         // If there is a valid output redirection
         if (output_redir_pos != NO_REDIRECT) {
+            printf("Replaces output\n");
             // Replae STDOUT with the file (located at arguments[output_redir_pos + 1]).
             // "w" denotes that the file will be overwritten and created if it doesn't exist.
             freopen(arguments[output_redir_pos + 1], "w", stdout);
@@ -182,6 +182,7 @@ void execute_bin() {
 
         // If there is a valid output redirection
         if (input_redir_pos != NO_REDIRECT) {
+            printf("Replaces input\n");
             // Replae STDIN with the file (located at arguments[input_redir_pos + 1]).
             // "r" denotes that the file will simply be read.
             freopen(arguments[input_redir_pos + 1], "r", stdin);
@@ -189,7 +190,7 @@ void execute_bin() {
 
         int has_redirect = output_redir_pos != -1 || input_redir_pos != -1;
         // If no redirect, execute the command directly
-        if (has_redirect) {
+        if (!has_redirect) {
             execvp(cmnd, arguments);
         }
         // If there is a redirect, the executed command must be extracted
