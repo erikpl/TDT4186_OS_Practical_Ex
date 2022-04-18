@@ -25,6 +25,7 @@ int built_in_cmd_len = sizeof(built_in_cmd) / sizeof(built_in_cmd[0]);
 int bg_child_pids[20];
 char bg_child_args[20][BUFFER_LENGTH][20];
 int bg_idx = 0;
+int bg_proc = 0;
 
 // Returnerer current working directory
 char * get_current_directory() {
@@ -51,8 +52,16 @@ void handle_user_input(char input[BUFFER_LENGTH]) {
         word = strtok(NULL, split_on);
         arg_idx++;
     }
+
+    // Check if we should run process in background
+    if (!strcmp(arguments[arg_idx-1], "&")) {
+        bg_proc = 1;
+    }
+
+    // Reset counter
     arg_idx = 0;
 }
+
 
 void execute_built_in() {
 
@@ -81,7 +90,10 @@ void execute_bin() {
     // For the parent process, print the status of the child process execution
     if (child_pid > 0) {
 
-        int bg_proc = 1;
+        // while (arguments[child_arg_idx]) { 
+        //     strcpy(bg_child_args[bg_idx][child_arg_idx], arguments[child_arg_idx]);
+        //     child_arg_idx++; 
+        // }
 
         // Put a process in the background
         if (bg_proc) {
