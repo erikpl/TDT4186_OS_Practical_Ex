@@ -96,8 +96,8 @@ char * get_current_directory(){
 // Håndterer brukerinput og legger kommandoen (første string) til i cmnd, og argumentene i arguments
 void handle_user_input(char input[BUFFER_LENGTH]) {
     // Flush buffers
-    memset(arguments, '\0', BUFFER_LENGTH * sizeof(char*));
-    memset(program, '\0', BUFFER_LENGTH * sizeof(char*));
+    //memset(arguments, '\0', BUFFER_LENGTH * sizeof(char*));
+    //memset(program, '\0', BUFFER_LENGTH * sizeof(char*));
 
     // Splitter på mellomrom og tab
     char split_on[3] = {' ', '\t', '\0'};
@@ -207,6 +207,7 @@ void execute_commands() {
 }
 
 int main() {
+    /*
     int keep_running = 1;
     char user_input[BUFFER_LENGTH];
 
@@ -225,4 +226,29 @@ int main() {
             execute_commands();
         }
     }
+    */
+    printf("Here?\n");
+    // char *location = "res.txt";
+    // char *source = "nn.txt";
+    // freopen(location, "w", stdout);
+    // freopen(source, "r", stdin);
+    // char *args[] = {"cat", NULL};
+    // execvp(args[0], args);
+
+    
+    char *cmd1 = "cat < source.txt > result.txt";
+    printf("Reached cmd %s\n", cmd1);
+    handle_user_input(cmd1);
+    // int64_t res1_in;
+    // int64_t res1_out;
+    // // int64_t res2_in;
+    // // int64_t res2_out;
+    // // int64_t res3_in;
+    // // int64_t res3_out;
+    // printf("I got here");
+    // get_io_type(&res1_out, &res1_in);
+    // printf("\nInput index: expected 1, got %d\n", (int) res1_in);
+    // printf("Output index: expected 3, got %d\n", (int) res1_out);
+    // get_io_type(*res2_out, *res2_in);
+    // get_io_type(*res3_out, *res3_in);
 }
