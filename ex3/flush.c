@@ -4,22 +4,27 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <sys/wait.h>
+#include <sys/types.h>
 
 #define BUFFER_LENGTH 700
 
 // General global variables
-int status;  
+int status;
 char *cmnd;
 char cwd[BUFFER_LENGTH];
 
 // Arguments variables
-char *arguments[BUFFER_LENGTH];
+char * arguments[BUFFER_LENGTH];
 int arg_idx = 0;
 
 // Built in command variables
 char * built_in_cmd [] = { "cd", "jobs", "cat"};
-int built_in_cmd_len = sizeof(built_in_cmd)/sizeof(built_in_cmd[0]);
+int built_in_cmd_len = sizeof(built_in_cmd) / sizeof(built_in_cmd[0]);
 
+// Background processes, maximum 20
+int bg_child_pids[20];
+char bg_child_args[20][BUFFER_LENGTH][20];
+int bg_idx = 0;
 
 // Returnerer current working directory
 char * get_current_directory() {
@@ -53,14 +58,11 @@ void execute_built_in() {
 
     // If the command is cd, change directory with built in chdir function
     if(strcmp(cmnd, "cd") == 0) {
-        printf("Arguments = %s\n", arguments[1]);
         if(arguments[0] == NULL) {
             printf("The path is empty.\n");
         }
-
         chdir(arguments[1]);
-    }  
-    
+    }
 }
 
 void execute_bin() {
@@ -69,40 +71,97 @@ void execute_bin() {
     pid_t parent_pid = getpid();
     pid_t child_pid = fork();
     pid_t curr_pid = getpid();
-    
+
+
     if (curr_pid == -1 && child_pid == 0) {
         printf("\nThere was an error when trying to fork.\n");
         return;
     }
 
     // For the parent process, print the status of the child process execution
-    else if (child_pid > 0) {
-        if(waitpid(child_pid, &status, 0) == -1) {
-            printf("Error: Failed calling waitpid.\n");
-            exit(EXIT_FAILURE);
+    if (child_pid > 0) {
+
+        int bg_proc = 1;
+
+        // Put a process in the background
+        if (bg_proc) {
+
+            // Store the child PID
+            bg_child_pids[bg_idx] = child_pid;
+
+            // Store the arguments in the child array.
+            int child_arg_idx = 0;
+
+
+            while (arguments[child_arg_idx]) { 
+                strcpy(bg_child_args[bg_idx][child_arg_idx], arguments[child_arg_idx]);
+                child_arg_idx++; 
+            }
+            printf("child arg idx %d, bg_idx %d",child_arg_idx, bg_idx );
+            // Reset the number of arguments counter
+            child_arg_idx = 0;
+
+            // Next background process
+            bg_idx++;
         }
-        
-        if(WIFEXITED(status)) {
-            int exit_status = WEXITSTATUS(status);     
-            printf("\nExit status [%s %s] = %d\n", cmnd, arguments[1], exit_status);
+
+        // Check background processes
+        for(int i = 0; i < 20; ++i) {
+            int finished = waitpid(bg_child_pids[i], &status, WNOHANG);
+
+            printf("PID %d: %d\n", i, bg_child_pids[i]);
+            if (finished == -1 && bg_child_pids[i] != 0 ) {
+                printf("PID: %d with args:", bg_child_pids[i]);
+
+                int bg_arg_idx = 0;
+                while (*(bg_child_args[i][bg_arg_idx])) {
+
+                    printf("%s ", bg_child_args[i][bg_arg_idx]);
+                    bg_arg_idx++;
+                }
+                bg_arg_idx = 0;
+                puts("\n");
+            }
+        }
+
+
+        if (bg_proc != 1) {
+
+            if(waitpid(child_pid, &status, 0) == -1) {
+
+                printf("Error: Failed calling waitpid.\n");
+                exit(EXIT_FAILURE);
+            }
+
+            if(WIFEXITED(status)) {
+
+                int exit_status = WEXITSTATUS(status);
+
+                // Print the status of the exec
+                printf("\nExit status [");
+                int arg_prnt_idx = 0;
+
+                // While there still are arguments
+                while (arguments[arg_prnt_idx]) {
+                    printf(" %s", arguments[arg_prnt_idx]);
+                    arg_prnt_idx++;
+                }
+                arg_prnt_idx = 0;
+                printf(" ] = %d", exit_status);
+            }
         }
     }
 
-    // Child_pid is 0 when we are in the child process. Run command
+    // Child_pid is 0 when we are in the child process. Run command.
     else if (child_pid == 0) {
 
         // Execute command
+        // setpgid(0, 0);
         execvp(cmnd, arguments);
 
         // Return error from command-execution
         printf("There was an error: %s\n", strerror(errno));
         exit(0);
-    }
-
-    // Waiting for child process to complete
-    else {
-        wait(NULL);
-        return;
     }
 }
 
@@ -114,13 +173,15 @@ int main() {
 
     while (1) {
 
-
         // Get user input
+
         printf("\n%s: ", get_current_directory());
+        fflush(stdout);
+
         fgets(user_input, BUFFER_LENGTH, stdin);
         fflush(stdin);
         printf("\n");
-        
+
 
         // Fjerner mellomrommet på slutten av user_input
         user_input[strlen(user_input) - 1] = '\0';
