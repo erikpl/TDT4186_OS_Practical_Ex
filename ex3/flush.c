@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <sys/wait.h>
+#include <fcntl.h>
 
 #define BUFFER_LENGTH 700
 #define INVALID_REDIRECT -2
@@ -23,9 +24,6 @@ int arg_idx = 0;
 char *built_in_cmd [] = {"cd", "jobs"};
 int built_in_cmd_len = sizeof(built_in_cmd)/sizeof(built_in_cmd[0]);
 
-// Hold the new program after redirections and new locations have been removed.
-char *program_after_io[BUFFER_LENGTH];
-
 
 // Returnerer current working directory
 char * get_current_directory() {
@@ -33,16 +31,18 @@ char * get_current_directory() {
     return cwd;
 }
 
-void set_subarray_from_args(int start_index, int stop_index, char **array[BUFFER_LENGTH]) {
-    int array_size = stop_index - start_index + 1;
-    for (int i = 0; i < array_size; i++) {
-        *array[i] = arguments[i];
+// Nulls out remaining arguments, including the first redirection delimiter.
+void set_subarray_from_args(int start_index) {
+    int counter = start_index;
+
+    while (arguments[counter] != NULL) {
+        arguments[counter] = NULL;
+        counter++;
     }
 }
 
 void emtpy_args () {
     memset(arguments, 0, BUFFER_LENGTH * sizeof(arguments[0]));
-    memset(program_after_io, 0, BUFFER_LENGTH * sizeof(arguments[0]));
 }
 
 // Håndterer brukerinput og legger kommandoen (første string) til i cmnd, og argumentene i arguments
@@ -66,7 +66,7 @@ void handle_user_input(char input[BUFFER_LENGTH]) {
 void execute_built_in() {
 
     // If the command is cd, change directory with built in chdir function
-    if(strcmp(cmnd, "cd") == 0) {
+    if (strcmp(cmnd, "cd") == 0) {
         printf("Arguments = %s\n", arguments[1]);
         if(arguments[0] == NULL) {
             printf("The path is empty.\n");
@@ -74,6 +74,18 @@ void execute_built_in() {
 
         chdir(arguments[1]);
     }  
+}
+
+int get_first_delimiter(int output_redir_pos, int input_redir_pos) {
+    if (output_redir_pos == -1) {
+        return input_redir_pos;
+    }
+    else if (input_redir_pos == -1) {
+        return output_redir_pos;
+    }
+    else {
+        return (input_redir_pos > output_redir_pos) ? output_redir_pos : input_redir_pos;
+    }
 }
 
 void get_io_type(int *output_index, int *input_index) {
@@ -146,12 +158,12 @@ void execute_bin() {
 
     // For the parent process, print the status of the child process execution
     else if (child_pid > 0) {
-        if(waitpid(child_pid, &status, 0) == -1) {
+        if (waitpid(child_pid, &status, 0) == -1) {
             printf("Error: Failed calling waitpid.\n");
             exit(EXIT_FAILURE);
         }
         
-        if(WIFEXITED(status)) {
+        if (WIFEXITED(status)) {
             int exit_status = WEXITSTATUS(status);     
             printf("\nExit status [%s %s] = %d\n", cmnd, arguments[1], exit_status);
         }
@@ -176,29 +188,32 @@ void execute_bin() {
             printf("Replaces output\n");
             // Replae STDOUT with the file (located at arguments[output_redir_pos + 1]).
             // "w" denotes that the file will be overwritten and created if it doesn't exist.
+            printf("freopen(%s, \"w\", stdout)", arguments[output_redir_pos+1]);
             freopen(arguments[output_redir_pos + 1], "w", stdout);
-            // TODO: will necessitate either changing the arguments array or executing it differently
+            // int fd = open(arguments[input_redir_pos + 1], O_RDWR|O_CREAT|O_APPEND, 0644);
+            // dup2(fd, STDIN_FILENO);
         }
 
         // If there is a valid output redirection
         if (input_redir_pos != NO_REDIRECT) {
-            printf("Replaces input\n");
             // Replae STDIN with the file (located at arguments[input_redir_pos + 1]).
             // "r" denotes that the file will simply be read.
             freopen(arguments[input_redir_pos + 1], "r", stdin);
+            // int fd = open(arguments[input_redir_pos+1], O_RDONLY);
+            // dup2(fd, STDOUT_FILENO);
         }
 
         int has_redirect = output_redir_pos != -1 || input_redir_pos != -1;
+        printf("has redirect: %d\n", has_redirect);
         // If no redirect, execute the command directly
-        if (!has_redirect) {
-            execvp(cmnd, arguments);
+        if (has_redirect) {
+            int first_delimiter = get_first_delimiter(output_redir_pos, input_redir_pos);
+
+            printf("First delimiter: %d\n", first_delimiter);
+            set_subarray_from_args(first_delimiter);
         }
-        // If there is a redirect, the executed command must be extracted
-        else {
-            int first_delimiter = (output_redir_pos > input_redir_pos) ? input_redir_pos : output_redir_pos;
-            set_subarray_from_args(0, first_delimiter - 1, &program_after_io);
-            execvp(cmnd, program_after_io);
-        }
+
+        execvp(cmnd, arguments);
 
         // Return error from command-execution
         printf("There was an error: %s\n", strerror(errno));
@@ -213,7 +228,6 @@ void execute_bin() {
 }
 
 int main() {
-
     char user_input[BUFFER_LENGTH];
     int is_executed = 0;
     char * line[BUFFER_LENGTH];
@@ -239,7 +253,7 @@ int main() {
         }
 
         // Check if the command is built into the shell
-        for(int i = 0; i < built_in_cmd_len; ++i) {
+        for (int i = 0; i < built_in_cmd_len; ++i) {
 
             // Execute built in command
             if (!strcmp(built_in_cmd[i], cmnd) && !is_executed) {
