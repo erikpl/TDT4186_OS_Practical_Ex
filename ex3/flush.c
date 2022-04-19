@@ -19,13 +19,13 @@ char * arguments[BUFFER_LENGTH];
 int arg_idx = 0;
 
 // Built in command variables
-char * built_in_cmd [] = { "cd", "jobs", "cat"};
+char * built_in_cmd [] = { "cd", "jobs"};
 int built_in_cmd_len = sizeof(built_in_cmd) / sizeof(built_in_cmd[0]);
 
 // Background processes, maximum 100
 int bg_child_pids[100];
-char bg_child_args[100][BUFFER_LENGTH][20];
-char * bg_child_args_ptr[100][BUFFER_LENGTH];
+int bg_child_args[100];
+char bg_child_args_history[1000][BUFFER_LENGTH][20];
 int bg_idx = 0;
 int bg_abs_idx = 0;
 int bg_proc = 0;
@@ -51,14 +51,18 @@ void handle_user_input(char input[BUFFER_LENGTH]) {
 
     // Lagrer argumentene i arguments
     while (word != NULL) {
-        arguments[arg_idx] = word;
+
+        // If the argument is "&", run in background        
+        if (!strcmp(word, "&")) {
+            bg_proc = 1;
+        }
+
+        // Add argument to list
+        else {
+            arguments[arg_idx] = word;
+        }
         word = strtok(NULL, split_on);
         arg_idx++;
-    }
-
-    // Check if we should run process in background
-    if (!strcmp(arguments[arg_idx-1], "&")) {
-        bg_proc = 1;
     }
 
     // Reset counter
@@ -75,6 +79,34 @@ void execute_built_in() {
         }
         chdir(arguments[1]);
     }
+    
+    // Check running background jobs
+    if (strcmp(cmnd, "jobs") == 0) {
+
+        // Loop through all child pids    
+        for(int i = 0; i < LEN(bg_child_pids); ++i) {
+            if (bg_child_pids[i] != 0) {
+            
+            // Print process ID 
+            printf("PID %d: %d. ", i, bg_child_pids[i]);
+
+            printf("Command line [");
+            int bg_arg_idx = 0;
+
+            // While the arguments are not "&". Find the correct index in the arguments history with the bg_child_args list. 
+            while (strcmp(bg_child_args_history[bg_child_args[bg_idx]][bg_arg_idx], "\0" ) != 0  ) {
+                printf(" %s", bg_child_args_history[bg_child_args[bg_idx]][bg_arg_idx]);
+                bg_arg_idx++;
+            }
+
+            // Printing the "&" we removed
+            printf(" &");
+            bg_arg_idx = 0;
+            printf(" ] = 0\n");
+
+            }
+        }
+    }
 }
 
 void execute_bin() {
@@ -83,7 +115,6 @@ void execute_bin() {
     pid_t parent_pid = getpid();
     pid_t child_pid = fork();
     pid_t curr_pid = getpid();
-
 
     if (curr_pid == -1 && child_pid == 0) {
         printf("\nThere was an error when trying to fork.\n");
@@ -102,31 +133,25 @@ void execute_bin() {
             // Store the arguments in the child array.
             int child_arg_idx = 0;
 
+            // Get the command arguments
             while (arguments[child_arg_idx]) { 
-                strcpy(bg_child_args[bg_abs_idx][child_arg_idx], arguments[child_arg_idx]);
-
-                bg_child_args_ptr[bg_abs_idx][child_arg_idx] = bg_child_args[bg_abs_idx][child_arg_idx];
-
+                strcpy(bg_child_args_history[bg_abs_idx][child_arg_idx], arguments[child_arg_idx]);
+                bg_child_args[bg_idx] = bg_abs_idx;
                 child_arg_idx++;
             }
 
-
-            printf("child arg idx %d, bg_idx %d",child_arg_idx, bg_idx );
             // Reset the number of arguments counter
             child_arg_idx = 0;
 
             // Next background process
             bg_abs_idx++;
             bg_idx++;
-            bg_proc = 0;
         }
 
         // Check background processes
-        for(int i = 0; i < 20; ++i) {
+        for(int i = 0; i < LEN(bg_child_pids); ++i) {
             // Check if each process is finished
             int finished = waitpid(bg_child_pids[i], &status, WNOHANG);
-
-            printf("PID %d: %d\n", i, bg_child_pids[i]);
 
             // Unused bg slots will also eval to -1
             if (finished == -1 && bg_child_pids[i] != 0 ) {
@@ -134,36 +159,22 @@ void execute_bin() {
                 // Print exit status of process
                 printf("\nExit status [");
                 int bg_arg_idx = 0;
-                // while (*(bg_child_args[i][bg_arg_idx])) {
 
-                //     printf(" %s", bg_child_args[i][bg_arg_idx]);
-                //     bg_arg_idx++;
-                // }
-                // while (*(bg_child_args[i][bg_arg_idx])) {
+                // While the arguments are not "&". Find the correct index in the arguments history with the bg_child_args list. 
+                while (strcmp(bg_child_args_history[bg_child_args[bg_idx]][bg_arg_idx], "\0" ) != 0  ) {
+                    printf(" %s", bg_child_args_history[bg_child_args[bg_idx]][bg_arg_idx]);
+                    bg_arg_idx++;
+                }
 
-                //     printf(" %s", bg_child_args[i][bg_arg_idx]);
-                //     bg_arg_idx++;
-                // }
+                // Printing the "&" we removed
+                printf(" &");
                 bg_arg_idx = 0;
                 printf(" ] = 0\n");
-
-
-                printf("Number of columns: %d\n", LEN(bg_child_args[0]));
-                // Delete the finished process 
+                // Delete the finished process. Because we use an absolute history and keep the index for the correct process, we dont have to reassign our matrix and do expensive calculation. The cost is extra storage of all args history.
                 for (int cancel_idx = i; cancel_idx < bg_idx - 1; cancel_idx++) {
                         bg_child_pids[i] = bg_child_pids[i + 1];
-
-
-                    //     puts("starting to update vars");
-                    //     // memset(bg_child_args[i], 0, BUFFER_LENGTH * sizeof(bg_child_args[i]));
-                    //     for (int j = 0; j < LEN(bg_child_args[0]);) {
-                    //         for (int k = 0; k < LEN(bg_child_args[0][0]);) {
-                    //             bg_child_args[i][j][k] = bg_child_args[i+1][j][k];
-                    //         }
-                    //     }
-                    //     puts("done updating vars.");
-                    // }
-
+                        bg_child_args[i] = bg_child_args[i + 1];
+                }
                 // Decrement the current background counter by one to correctly assign next background process
                 bg_idx--;
             }
@@ -183,6 +194,7 @@ void execute_bin() {
 
                 int exit_status = WEXITSTATUS(status);
 
+                // if (bg_proc != 1) {
                 // Print the status of the exec
                 printf("\nExit status [");
                 int arg_prnt_idx = 0;
@@ -196,13 +208,15 @@ void execute_bin() {
                 printf(" ] = %d", exit_status);
             }
         }
+        bg_proc = 0;
+        fflush(stdout);
     }
 
     // Child_pid is 0 when we are in the child process. Run command.
     else if (child_pid == 0) {
 
         // Execute command
-        // setpgid(0, 0);
+        setpgid(0, 0);
         execvp(cmnd, arguments);
 
         // Return error from command-execution
