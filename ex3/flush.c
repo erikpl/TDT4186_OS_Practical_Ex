@@ -97,19 +97,20 @@ void execute_built_in() {
     // Check running background jobs
     if (strcmp(cmnd, "jobs") == 0) {
 
+        printf("bg_idx %d", bg_idx);
         // Loop through all child pids    
-        for(int i = 0; i < LEN(bg_child_pids); ++i) {
-            if (bg_child_pids[i] != 0) {
+        for(int loop_idx = 0; loop_idx < bg_idx; loop_idx++) {
+            // if (bg_child_pids[i] != 0) {
             
             // Print process ID 
-            printf("PID %d: %d. ", i, bg_child_pids[i]);
+            printf("PID %d: %d. ", loop_idx, bg_child_pids[loop_idx]);
 
             printf("Command line [");
             int bg_arg_idx = 0;
 
             // While the arguments are not "&". Find the correct index in the arguments history with the bg_child_args list. 
-            while (strcmp(bg_child_args_history[bg_child_args[bg_idx]][bg_arg_idx], "\0" ) != 0  ) {
-                printf(" %s", bg_child_args_history[bg_child_args[bg_idx]][bg_arg_idx]);
+            while (strcmp(bg_child_args_history[bg_child_args[loop_idx]][bg_arg_idx], "\0" ) != 0  ) {
+                printf(" %s", bg_child_args_history[bg_child_args[loop_idx]][bg_arg_idx]);
                 bg_arg_idx++;
             }
 
@@ -118,7 +119,7 @@ void execute_built_in() {
             bg_arg_idx = 0;
             printf(" ] = 0\n");
 
-            }
+            // }
         }
     }
 }
@@ -252,7 +253,7 @@ void execute_bin() {
                 printf(" &");
                 bg_arg_idx = 0;
                 printf(" ] = 0\n");
-                // Delete the finished process. Because we use an absolute history and keep the index for the correct process, we dont have to reassign our matrix and do expensive calculation. The cost is extra storage of all args history.
+                // Delete the finished process.
                 for (int cancel_idx = i; cancel_idx < bg_idx - 1; cancel_idx++) {
                         bg_child_pids[i] = bg_child_pids[i + 1];
                         bg_child_args[i] = bg_child_args[i + 1];
