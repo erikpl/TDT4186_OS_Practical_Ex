@@ -44,6 +44,11 @@ char * get_current_directory() {
 void set_subarray_from_args(int start_index) {
     int counter = start_index;
 
+    /* There is a confusion between NULL-ing out the argument array and
+    *  and zeroing it out when flushing. This is because execvp expects a 
+    *  NULL-terminated array. Since zeroing out is always done and used before 
+    *  NULL-ing out, this works.
+    */
     while (arguments[counter] != NULL) {
         arguments[counter] = NULL;
         counter++;
@@ -136,16 +141,15 @@ int get_first_delimiter(int output_redir_pos, int input_redir_pos) {
     }
 }
 
+
 void get_io_type(int *output_index, int *input_index) {
-    printf("Executing io type\n");
     int input_redir_pos = -1;
     int output_redir_pos = -1;
 
     int loop_counter = 0;
+    
     while (arguments[loop_counter] != 0) {
-        printf("Argument nr. %d: %s\n", loop_counter, arguments[loop_counter]);
         if (strcmp(arguments[loop_counter], ">") == 0) {
-            printf("Found output\n");
             if (output_redir_pos != -1) {
                 // More than one output redirect is not supported
                 *output_index = INVALID_REDIRECT;
@@ -157,7 +161,6 @@ void get_io_type(int *output_index, int *input_index) {
         }
 
         if (strcmp(arguments[loop_counter], "<") == 0) {
-            printf("Found input\n");
             if (input_redir_pos != -1) {
                 // More than one input redirect is not supported
                 *output_index = INVALID_REDIRECT;
@@ -167,7 +170,7 @@ void get_io_type(int *output_index, int *input_index) {
             input_redir_pos = loop_counter;
         }
 
-        if (output_redir_pos < input_redir_pos) {
+        if (output_redir_pos > input_redir_pos) {
             // Redirecting output before input is not supported
             *output_index = INVALID_REDIRECT;
             *input_index = INVALID_REDIRECT;
@@ -178,29 +181,24 @@ void get_io_type(int *output_index, int *input_index) {
     }
 
     // Check if no redirect
-    printf("Input redir pos: %d\n", input_redir_pos);
-    printf("Output redir pos: %d\n", output_redir_pos);
     if (input_redir_pos == -1 && output_redir_pos == -1) {
-        printf("No redirect");
         *input_index = NO_REDIRECT;
         *output_index = NO_REDIRECT;
     }
     else {
-        printf("Yes redirect\n");
         *input_index = input_redir_pos;
         *output_index = output_redir_pos;
     }
 }
 
 void execute_bin() {
-    printf("Executes bin\n");
     // Get PIDs
     pid_t parent_pid = getpid();
     pid_t child_pid = fork();
     pid_t curr_pid = getpid();
 
     if (curr_pid == -1 && child_pid == 0) {
-        printf("\nThere was an error when trying to fork.\n");
+        fprintf(stderr, "\nThere was an error when trying to fork.\n");
         return;
     }
 
@@ -269,7 +267,7 @@ void execute_bin() {
             // Wait for process to finish
             if(waitpid(child_pid, &status, 0) == -1) {
 
-                printf("Error: Failed calling waitpid.\n");
+                fprintf(stderr, "Error: Failed calling waitpid.\n");
                 exit(EXIT_FAILURE);
             }
 
@@ -318,8 +316,6 @@ void execute_bin() {
             // "w" denotes that the file will be overwritten and created if it doesn't exist.
             printf("freopen(%s, \"w\", stdout)", arguments[output_redir_pos+1]);
             freopen(arguments[output_redir_pos + 1], "w", stdout);
-            // int fd = open(arguments[input_redir_pos + 1], O_RDWR|O_CREAT|O_APPEND, 0644);
-            // dup2(fd, STDIN_FILENO);
         }
 
         // If there is a valid output redirection
@@ -327,8 +323,6 @@ void execute_bin() {
             // Replae STDIN with the file (located at arguments[input_redir_pos + 1]).
             // "r" denotes that the file will simply be read.
             freopen(arguments[input_redir_pos + 1], "r", stdin);
-            // int fd = open(arguments[input_redir_pos+1], O_RDONLY);
-            // dup2(fd, STDOUT_FILENO);
         }
 
         int has_redirect = output_redir_pos != -1 || input_redir_pos != -1;
@@ -344,8 +338,8 @@ void execute_bin() {
         execvp(cmnd, arguments);
 
         // Return error from command-execution
-        printf("There was an error: %s\n", strerror(errno));
-        exit(0);
+        fprintf(stderr, "There was an error: %s\n", strerror(errno));
+        exit(EXIT_SUCCESS);
     }
 }
 
