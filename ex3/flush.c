@@ -35,8 +35,6 @@ int bg_idx = 0;
 int bg_abs_idx = 0;
 int bg_proc = 0;
 
-// int link[2];
-
 
 // Returnerer current working directory
 char * get_current_directory() {
@@ -87,7 +85,6 @@ void handle_user_input(char input[BUFFER_LENGTH]) {
         word = strtok(NULL, split_on);
         arg_idx++;
     }
-
     // Reset counter
     arg_idx = 0;
 }
@@ -108,7 +105,6 @@ void execute_built_in() {
 
         // Loop through all child pids    
         for(int loop_idx = 0; loop_idx < bg_idx; loop_idx++) {
-            // if (bg_child_pids[i] != 0) {
             
             // Print process ID 
             printf("PID %d: %d. ", loop_idx, bg_child_pids[loop_idx]);
@@ -197,6 +193,63 @@ void get_io_type(int *output_index, int *input_index) {
     }
 }
 
+void execute_bin();
+
+void cmnd_prompt() {
+        fflush(stdin);
+        fflush(stdout);
+
+        printf("\n%s: ", get_current_directory());
+
+        fgets(user_input, BUFFER_LENGTH, stdin);
+        fflush(stdin);
+        printf("\n");
+}
+
+int main() {
+    int is_executed = 0;
+    char * line[BUFFER_LENGTH];
+
+    while (1) {
+
+        // Get user input
+        cmnd_prompt();
+
+        // Fjerner mellomrommet på slutten av user_input
+        user_input[strlen(user_input) - 1] = '\0';
+
+        handle_user_input(user_input);
+
+
+        // If user presses ctrl-d and thus no inputs are given.
+        if (arguments[0] == NULL ) {
+            printf("Exiting flush.");
+            return 0;
+        }
+
+        // Check if the command is built into the shell
+        for (int i = 0; i < built_in_cmd_len; ++i) {
+
+            // Execute built in command
+            if (!strcmp(built_in_cmd[i], cmnd) && !is_executed) {
+                execute_built_in();
+                is_executed = 1;
+            }
+        }
+
+        // The command was not built in. Run command with path-matching.
+        if (!is_executed) {
+            execute_bin();
+            is_executed = 1;
+        }
+
+        // Clean arguments array
+        emtpy_args();
+        is_executed = 0;
+    }
+}
+
+
 void execute_bin() {
     // Get PIDs
     pid_t parent_pid = getpid();
@@ -257,13 +310,8 @@ void execute_bin() {
                 printf(" &");
                 bg_arg_idx = 0;
                 printf(" ] = 0\n");
+
                 // Delete the finished process.
-                // printf("child PID %d, child arg idx %d", bg_child_pids[i],  bg_child_args[i] );
-                // printf("child PID %d, child arg idx %d", bg_child_pids[i+1],  bg_child_args[i+1] );
-                // printf("at idx %d", i);
-                // for (int i = 0; i < LEN(bg_child_pids); i++) {
-                //     printf("\nchild PID %d, child arg idx %d", bg_child_pids[i],  bg_child_args[i] );
-                // }
                 for (int cancel_idx = i; cancel_idx < 100 - 1; cancel_idx++) {
                         bg_child_pids[cancel_idx] = bg_child_pids[cancel_idx + 1];
                         bg_child_args[cancel_idx] = bg_child_args[cancel_idx + 1];
@@ -272,7 +320,6 @@ void execute_bin() {
                 // }
                 // Decrement the current background counter by one to correctly assign next background process
                 bg_idx--;
-                printf("decrementing pointer. bg idx now %d", bg_idx);
             }
         }
 
@@ -290,7 +337,6 @@ void execute_bin() {
 
                 int exit_status = WEXITSTATUS(status);
 
-                // if (bg_proc != 1) {
                 // Print the status of the exec
                 printf("\nExit status [");
                 int arg_prnt_idx = 0;
@@ -352,65 +398,5 @@ void execute_bin() {
         // Return error from command-execution
         fprintf(stderr, "There was an error: %s\n", strerror(errno));
         exit(EXIT_SUCCESS);
-    }
-}
-
-void cmnd_prompt() {
-        fflush(stdin);
-        fflush(stdout);
-
-        printf("\n%s: ", get_current_directory());
-        // fflush(stdout);
-
-        fgets(user_input, BUFFER_LENGTH, stdin);
-        fflush(stdin);
-        printf("\n");
-}
-
-int main() {
-    int is_executed = 0;
-    char * line[BUFFER_LENGTH];
-
-    while (1) {
-
-        // Get user input
-        int some_index = 2;
-
-        if (some_index >= 0) {
-            cmnd_prompt();
-            some_index--;
-        }
-
-        // Fjerner mellomrommet på slutten av user_input
-        user_input[strlen(user_input) - 1] = '\0';
-
-        handle_user_input(user_input);
-
-
-        // If user presses ctrl-d and thus no inputs are given.
-        if (arguments[0] == NULL ) {
-            printf("Exiting flush.");
-            return 0;
-        }
-
-        // Check if the command is built into the shell
-        for (int i = 0; i < built_in_cmd_len; ++i) {
-
-            // Execute built in command
-            if (!strcmp(built_in_cmd[i], cmnd) && !is_executed) {
-                execute_built_in();
-                is_executed = 1;
-            }
-        }
-
-        // The command was not built in. Run command with path-matching.
-        if (!is_executed) {
-            execute_bin();
-            is_executed = 1;
-        }
-
-        // Clean arguments array
-        emtpy_args();
-        is_executed = 0;
     }
 }
