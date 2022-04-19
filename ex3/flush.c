@@ -17,6 +17,7 @@
 int status;
 char *cmnd;
 char cwd[BUFFER_LENGTH];
+char user_input[BUFFER_LENGTH];
 
 // Arguments variables
 char * arguments[BUFFER_LENGTH];
@@ -33,6 +34,9 @@ char bg_child_args_history[1000][BUFFER_LENGTH][20];
 int bg_idx = 0;
 int bg_abs_idx = 0;
 int bg_proc = 0;
+
+// int link[2];
+
 
 // Returnerer current working directory
 char * get_current_directory() {
@@ -102,7 +106,6 @@ void execute_built_in() {
     // Check running background jobs
     if (strcmp(cmnd, "jobs") == 0) {
 
-        printf("bg_idx %d", bg_idx);
         // Loop through all child pids    
         for(int loop_idx = 0; loop_idx < bg_idx; loop_idx++) {
             // if (bg_child_pids[i] != 0) {
@@ -125,6 +128,9 @@ void execute_built_in() {
             printf(" ] = 0\n");
 
             // }
+        }
+        if (bg_idx == 0) {
+            puts("No background jobs currently running.");
         }
     }
 }
@@ -252,12 +258,21 @@ void execute_bin() {
                 bg_arg_idx = 0;
                 printf(" ] = 0\n");
                 // Delete the finished process.
-                for (int cancel_idx = i; cancel_idx < bg_idx - 1; cancel_idx++) {
-                        bg_child_pids[i] = bg_child_pids[i + 1];
-                        bg_child_args[i] = bg_child_args[i + 1];
+                // printf("child PID %d, child arg idx %d", bg_child_pids[i],  bg_child_args[i] );
+                // printf("child PID %d, child arg idx %d", bg_child_pids[i+1],  bg_child_args[i+1] );
+                // printf("at idx %d", i);
+                // for (int i = 0; i < LEN(bg_child_pids); i++) {
+                //     printf("\nchild PID %d, child arg idx %d", bg_child_pids[i],  bg_child_args[i] );
+                // }
+                for (int cancel_idx = i; cancel_idx < 100 - 1; cancel_idx++) {
+                        bg_child_pids[cancel_idx] = bg_child_pids[cancel_idx + 1];
+                        bg_child_args[cancel_idx] = bg_child_args[cancel_idx + 1];
                 }
+
+                // }
                 // Decrement the current background counter by one to correctly assign next background process
                 bg_idx--;
+                printf("decrementing pointer. bg idx now %d", bg_idx);
             }
         }
 
@@ -311,10 +326,8 @@ void execute_bin() {
 
         // If there is a valid output redirection
         if (output_redir_pos != NO_REDIRECT) {
-            printf("Replaces output\n");
             // Replae STDOUT with the file (located at arguments[output_redir_pos + 1]).
             // "w" denotes that the file will be overwritten and created if it doesn't exist.
-            printf("freopen(%s, \"w\", stdout)", arguments[output_redir_pos+1]);
             freopen(arguments[output_redir_pos + 1], "w", stdout);
         }
 
@@ -326,7 +339,6 @@ void execute_bin() {
         }
 
         int has_redirect = output_redir_pos != -1 || input_redir_pos != -1;
-        printf("has redirect: %d\n", has_redirect);
         // If no redirect, execute the command directly
         if (has_redirect) {
             int first_delimiter = get_first_delimiter(output_redir_pos, input_redir_pos);
@@ -343,21 +355,31 @@ void execute_bin() {
     }
 }
 
-int main() {
-    char user_input[BUFFER_LENGTH];
-    int is_executed = 0;
-    char * line[BUFFER_LENGTH];
-
-    while (1) {
-        // Get user input
+void cmnd_prompt() {
+        fflush(stdin);
+        fflush(stdout);
 
         printf("\n%s: ", get_current_directory());
-        fflush(stdout);
+        // fflush(stdout);
 
         fgets(user_input, BUFFER_LENGTH, stdin);
         fflush(stdin);
         printf("\n");
+}
 
+int main() {
+    int is_executed = 0;
+    char * line[BUFFER_LENGTH];
+
+    while (1) {
+
+        // Get user input
+        int some_index = 2;
+
+        if (some_index >= 0) {
+            cmnd_prompt();
+            some_index--;
+        }
 
         // Fjerner mellomrommet på slutten av user_input
         user_input[strlen(user_input) - 1] = '\0';
